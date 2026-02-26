@@ -72,7 +72,7 @@
     <div class="max-w-6xl mx-auto">
         <div class="text-center mb-8 text-white">
             <h1 class="text-4xl md:text-5xl font-bold mb-2">🎁 兑换码系统</h1>
-            <p class="text-lg opacity-90">生成二维码 → 扫码兑换 → 一次性使用</p>
+            <p class="text-lg opacity-90">24级14班专用</p>
         </div>
 
         <div class="flex justify-center mb-8">
@@ -306,7 +306,7 @@
         function generateCodes() {
             const reward = document.getElementById('reward-content').value.trim();
             const count = parseInt(document.getElementById('generate-count').value) || 1;
-            if (!reward) { alert('请输入兑换内容！'); return; }
+            if (!reward) { alert('请输入姓名！'); return; }
             if (count < 1 || count > 20) { alert('1-20个'); return; }
 
             const qrArea = document.getElementById('qr-display-area');
@@ -398,7 +398,7 @@
             redemptionCodes[norm].usedTime = new Date().toISOString();
             saveData();
             const rw = redemptionCodes[norm].reward;
-            showResult('success', `<div class="success-pulse"><div class="text-5xl mb-3">🎉</div><div class="text-xl font-bold text-green-800 mb-2">兑换成功！</div><div class="bg-white/50 rounded-lg p-3 mt-2"><div class="text-sm text-gray-600">获得奖励</div><div class="text-lg font-bold text-purple-700">${rw}</div></div></div>`);
+            showResult('success', `<div class="success-pulse"><div class="text-5xl mb-3">🎉</div><div class="text-xl font-bold text-green-800 mb-2">兑换成功！</div><div class="bg-white/50 rounded-lg p-3 mt-2"><div class="text-sm text-gray-600">扫地卡姓名</div><div class="text-lg font-bold text-purple-700">${rw}</div></div></div>`);
             input.value = '';
             setTimeout(() => resultDiv.classList.add('hidden'), 5000);
         }
