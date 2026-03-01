@@ -68,7 +68,93 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请输入访问密钥</title>
+    <style>
+        /* 简单的居中样式 */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .auth-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 300px;
+            text-align: center;
+        }
+        h2 { color: #333; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background-color: #0056b3; }
+        #error-message { color: red; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h2>🔒 访问密钥验证</h2>
+        <input type="password" id="secret-input" placeholder="请输入访问密钥">
+        <button onclick="checkSecret()">验证并进入</button>
+        <div id="error-message">密钥错误，请重试</div>
+    </div>
 
+    <script>
+        // ######## 配置区 ########
+        const CORRECT_SECRET = "2414777"; // 密钥
+        // ########################
+
+        function checkSecret() {
+            const userInput = document.getElementById('secret-input').value.trim();
+            const errorMsg = document.getElementById('error-message');
+
+            if (userInput === CORRECT_SECRET) {
+                // 密钥正确，显示你的网站内容
+                document.body.innerHTML = `
+                    <h1>欢迎进入兑换码系统</h1>
+                    <p>这里是你的兑换码内容...</p >
+                    <!-- 在这里添加你的网站主体内容 -->
+                `;
+            } else {
+                // 密钥错误，显示提示
+                errorMsg.style.display = 'block';
+                // 清空输入框
+                document.getElementById('secret-input').value = '';
+            }
+        }
+
+        // 允许按回车键提交
+        document.getElementById('secret-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkSecret();
+        });
+    </script>
+</body>
+</html>
     <div class="max-w-6xl mx-auto">
         <div class="text-center mb-8 text-white">
             <h1 class="text-4xl md:text-5xl font-bold mb-2">🎁 兑换码系统</h1>
