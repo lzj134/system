@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兑换码管理系统</title>
+    <title>免扫地卡管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -88,7 +88,7 @@
     <div class="glass-card text-center">
         <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
         <h2 class="text-xl font-bold text-gray-800 mt-4 mb-2">访问验证</h2>
-        <p class="text-gray-500 text-sm mb-6">请输入密钥进入系统</p>
+        <p class="text-gray-500 text-sm mb-6">请输入密钥进入</p>
         <input type="password" id="secret-input" placeholder="输入密钥" class="input-field mb-4">
         <button onclick="checkSecret()" class="btn-primary">进入系统</button>
         <div id="errTip" class="text-red-500 text-sm mt-3 hidden">密钥错误，请重试</div>
