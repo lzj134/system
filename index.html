@@ -3,545 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>免扫地卡兑换系统 </title>
-    <script>
-      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
+    <title>兑换码管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Noto Sans SC', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
             min-height: 100vh;
+            background: linear-gradient(135deg, #0066ff 0%, #3399ff 100%);
+            background-attachment: fixed;
+            font-family: system-ui, -apple-system, sans-serif;
         }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .code-input {
-            letter-spacing: 0.3em;
-            font-family: 'Courier New', monospace;
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .shake {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-        }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-        .success-pulse {
-            animation: successPulse 0.6s ease-out;
-        }
-        @keyframes successPulse {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .qr-item {
-            transition: all 0.3s ease;
-        }
-        .qr-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        .tab-active {
-            background: white;
-            color: #7c3aed;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .tab-inactive {
-            color: white;
+        #auth-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
             background: transparent;
+            color: white;
+            padding: 20px;
         }
-        .tab-inactive:hover {
-            background: rgba(255, 255, 255, 0.1);
+        #main-content {
+            display: none;
+            padding: 20px;
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: none;
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.85);
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #0066ff;
+            box-shadow: 0 4px 12px rgba(0,102,255,0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0066ff, #3399ff);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+        }
+        /* 修复重点：去掉所有遮挡，确保可输入 */
+        .input-field {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #cce0ff;
+            border-radius: 12px;
+            text-align: center;
+            outline: none;
+            background: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .input-field:focus {
+            border-color: #0066ff;
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
-        <!-- 密钥验证遮罩层 -->
-    <div id="auth-mask" style="position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, #1a2a6c, #b21f1f); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:15px; color: white;">
-        <h3 class="text-2xl font-bold">🔒 访问密钥验证</h3>
-        <input type="password" id="secret-input" style="padding:12px 16px; width:280px; font-size:16px; border-radius:8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: white; outline: none;" placeholder="输入访问密钥" autocomplete="off">
-        <button onclick="checkSecret()" style="padding:12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)';" onmouseout="this.style.transform='scale(1)';">验证进入</button>
-        <div id="error-tip" style="color: #ff6b6b; display:none; font-size: 14px; margin-top: 5px;">密钥错误，请重试</div>
+<body>
+
+<!-- 登录页（修复：输入框可正常点击输入） -->
+<div id="auth-screen">
+    <div class="glass-card text-center">
+        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
+        <h2 class="text-xl font-bold text-gray-800 mt-4 mb-2">访问验证</h2>
+        <p class="text-gray-500 text-sm mb-6">请输入密钥进入系统</p>
+        <input type="password" id="secret-input" placeholder="输入密钥" class="input-field mb-4">
+        <button onclick="checkSecret()" class="btn-primary">进入系统</button>
+        <div id="errTip" class="text-red-500 text-sm mt-3 hidden">密钥错误，请重试</div>
+    </div>
+</div>
+
+<!-- 主页面 -->
+<div id="main-content" class="max-w-5xl mx-auto">
+    <div class="text-center text-white mt-6 mb-8">
+        <div class="text-5xl mb-2">🎁</div>
+        <h1 class="text-3xl font-bold">兑换码管理系统</h1>
+        <p class="opacity-80 mt-2">生成 · 兑换 · 记录管理</p>
     </div>
 
-    <script>
-        // ========== 在此修改你的密钥 ==========
-        const CORRECT_SECRET = "2414777"; 
-        // ====================================
-
-        function checkSecret() {
-            const input = document.getElementById("secret-input").value.trim();
-            const errorTip = document.getElementById("error-tip");
-
-            if (input === CORRECT_SECRET) {
-                document.getElementById("auth-mask").remove(); // 验证通过，移除遮罩
-            } else {
-                errorTip.style.display = "block";
-                document.getElementById("secret-input").value = "";
-                // 加个边框变红动画
-                const inputEl = document.getElementById('secret-input');
-                inputEl.style.borderColor = '#ff6b6b';
-                setTimeout(() => {
-                    inputEl.style.borderColor = 'rgba(255,255,255,0.3)';
-                }, 1000);
-            }
-        }
-
-        // 支持回车确认
-        document.getElementById("secret-input").addEventListener("keydown", (e) => {
-            if (e.key === "Enter") checkSecret();
-        });
-    </script>
-    <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-8 text-white">
-            <h1 class="text-4xl md:text-5xl font-bold mb-2">免扫地卡兑换系统</h1>
-            <p class="text-lg opacity-90">2414</p>
-        </div>
-
-        <div class="flex justify-center mb-8">
-            <div class="bg-white/20 backdrop-blur-md p-1 rounded-full inline-flex">
-                <button onclick="switchTab('redeem')" id="tab-redeem" class="px-6 py-2 rounded-full font-medium transition-all tab-active">
-                    兑换码兑换
-                </button>
-                <button onclick="switchTab('generate')" id="tab-generate" class="px-6 py-2 rounded-full font-medium transition-all tab-inactive">
-                    生成兑换码
-                </button>
-                <button onclick="switchTab('records')" id="tab-records" class="px-6 py-2 rounded-full font-medium transition-all tab-inactive">
-                    兑换记录
-                </button>
-            </div>
-        </div>
-
-        <div id="view-redeem" class="glass-panel rounded-2xl shadow-2xl p-6 md:p-10 max-w-md mx-auto animate-fade-in">
-            <div class="text-center mb-6">
-                <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-3xl">
-                    🎫
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">输入兑换码</h2>
-                <p class="text-gray-500 text-sm mt-1">每个兑换码只能使用一次</p>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <input type="text" id="redeem-code" placeholder="XXXX-XXXX-XXXX" 
-                           class="code-input w-full px-4 py-4 text-center text-xl border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all uppercase"
-                           maxlength="14">
-                </div>
-                
-                <button onclick="redeemCode()" 
-                        class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all active:scale-95">
-                    立即兑换
-                </button>
-
-                <div class="text-center">
-                    <button onclick="startScan()" class="text-purple-600 text-sm hover:underline flex items-center justify-center gap-1 mx-auto">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                        扫码兑换
-                    </button>
-                </div>
-            </div>
-
-            <div id="redeem-result" class="hidden mt-6 p-4 rounded-xl text-center"></div>
-        </div>
-
-        <div id="view-generate" class="hidden glass-panel rounded-2xl shadow-2xl p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">生成新兑换码</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6 mb-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">兑换内容/奖励 <span class="text-red-500">*</span></label>
-                        <input type="text" id="reward-content" placeholder="例如：VIP会员30天、100元优惠券" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">生成数量</label>
-                        <div class="flex items-center gap-3">
-                            <input type="number" id="generate-count" value="1" min="1" max="20" 
-                                   class="w-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-center">
-                            <span class="text-gray-500 text-sm">最多20个</span>
-                        </div>
-                    </div>
-
-                    <button onclick="generateCodes()" 
-                            class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        生成兑换码
-                    </button>
-
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                        <strong>提示：</strong>生成的二维码包含完整链接，手机扫码即可直接兑换
-                    </div>
-                </div>
-
-                <div class="bg-gray-50 rounded-xl p-4 min-h-[300px]" id="qr-display-area">
-                    <div class="text-gray-400 text-center h-full flex flex-col items-center justify-center">
-                        <p class="text-4xl mb-2">📱</p>
-                        <p>生成的二维码将显示在这里</p>
-                        <p class="text-sm mt-2">可扫码直接兑换</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="generated-codes" class="hidden">
-                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    生成成功！请保存以下兑换码
-                </h3>
-                <div class="grid gap-2" id="codes-list"></div>
-            </div>
-        </div>
-
-        <div id="view-records" class="hidden glass-panel rounded-2xl shadow-2xl p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <h2 class="text-2xl font-bold text-gray-800">兑换记录管理</h2>
-                <div class="flex gap-4 text-sm bg-gray-100 p-3 rounded-lg">
-                    <div>总兑换码: <span id="total-codes" class="font-bold text-purple-600 text-lg">0</span></div>
-                    <div class="border-l border-gray-300 pl-4">已使用: <span id="used-codes" class="font-bold text-red-500 text-lg">0</span></div>
-                    <div class="border-l border-gray-300 pl-4">剩余: <span id="remaining-codes" class="font-bold text-green-500 text-lg">0</span></div>
-                </div>
-            </div>
-
-            <div class="mb-4 flex gap-2">
-                <button onclick="exportData()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    导出数据
-                </button>
-                <button onclick="clearAllData()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    清空所有
-                </button>
-                <label class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm flex items-center gap-1 cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    导入数据
-                    <input type="file" id="import-file" accept=".json" onchange="importData(this)" class="hidden">
-                </label>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b-2 border-gray-200 bg-gray-50">
-                            <th class="py-3 px-4 text-gray-600 font-semibold">兑换码</th>
-                            <th class="py-3 px-4 text-gray-600 font-semibold">奖励内容</th>
-                            <th class="py-3 px-4 text-gray-600 font-semibold">状态</th>
-                            <th class="py-3 px-4 text-gray-600 font-semibold">创建时间</th>
-                            <th class="py-3 px-4 text-gray-600 font-semibold">兑换时间</th>
-                            <th class="py-3 px-4 text-gray-600 font-semibold">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="records-table-body" class="text-sm">
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="empty-state" class="text-center py-12 text-gray-400">
-                <p class="text-5xl mb-4">📭</p>
-                <p>暂无兑换记录</p>
-                <p class="text-sm mt-2">点击"生成兑换码"创建第一个兑换码</p>
-            </div>
+    <div class="flex justify-center mb-8">
+        <div class="bg-white/15 rounded-full p-1 flex gap-1">
+            <button onclick="switchTab('redeem')" class="tab-btn active" data-tab="redeem">兑换码兑换</button>
+            <button onclick="switchTab('generate')" class="tab-btn" data-tab="generate">生成兑换码</button>
+            <button onclick="switchTab('records')" class="tab-btn" data-tab="records">兑换记录</button>
         </div>
     </div>
 
-    <div id="qr-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="closeQrModal(event)">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center transform scale-100 transition-transform animate-fade-in" onclick="event.stopPropagation()">
-            <h3 class="text-lg font-bold mb-4">扫码立即兑换</h3>
-            <div id="modal-qr-container" class="flex justify-center mb-4 bg-gray-50 p-4 rounded-xl"></div>
-            <p class="text-gray-500 text-sm mb-2">兑换码</p>
-            <p id="modal-code-text" class="font-mono text-xl text-purple-700 font-bold mb-4 break-all bg-gray-100 p-2 rounded-lg"></p>
-            <p class="text-xs text-gray-400 mb-4">截图保存或长按二维码识别</p>
-            <div class="flex gap-2">
-                <button onclick="copyFromModal()" class="flex-1 bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition-colors">
-                    复制码
-                </button>
-                <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="flex-1 bg-gray-200 hover:bg-gray-300 py-2 rounded-lg transition-colors">
-                    关闭
-                </button>
-            </div>
+    <!-- 兑换面板 -->
+    <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
+            <h2 class="text-xl font-bold text-gray-800 mt-3">输入兑换码</h2>
         </div>
+        <input type="text" id="redeemCode" placeholder="XXXX-XXXX-XXXX" maxlength="14" class="input-field mb-4 uppercase">
+        <button onclick="doRedeem()" class="btn-primary">立即兑换</button>
+        <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
     </div>
 
-    <div id="scan-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
-        <div class="text-white text-center mb-4">
-            <h3 class="text-xl font-bold">对准二维码扫描</h3>
-            <p class="text-sm opacity-80 mt-1">支持微信、支付宝、浏览器扫码</p>
+    <!-- 生成面板 -->
+    <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
+        <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
+        <div class="space-y-4">
+            <input type="text" id="rewardTxt" placeholder="奖励内容" class="input-field">
+            <input type="number" id="genNum" value="1" min="1" max="20" class="input-field">
+            <button onclick="createCode()" class="btn-primary">一键生成</button>
         </div>
-        <div class="w-full max-w-sm aspect-square bg-white/10 rounded-2xl flex items-center justify-center mb-4 border-2 border-dashed border-white/30">
-            <div class="text-center text-white/60">
-                <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
-                <p>请使用系统相机或微信扫码</p>
-            </div>
-        </div>
-        <div class="flex gap-3">
-            <button onclick="document.getElementById('scan-modal').classList.add('hidden')" class="px-6 py-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition-colors">
-                取消
-            </button>
-        </div>
-        <div class="mt-6 text-white/60 text-xs max-w-xs text-center">
-            <p>提示：由于浏览器限制，网页无法直接调用相机扫码。</p>
-            <p class="mt-1">请使用微信扫一扫或手机相机扫描屏幕上的二维码</p>
-        </div>
+        <div id="qrBox" class="bg-gray-50 rounded-lg p-4 min-h-[280px] flex items-center justify-center text-gray-400 mt-4">二维码区域</div>
+        <div id="codeList" class="mt-4"></div>
     </div>
 
-    <script>
-        let redemptionCodes = {};
-        let currentModalCode = '';
+    <!-- 记录面板 -->
+    <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
+        <div id="recordBody" class="text-sm"></div>
+        <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
+    </div>
+</div>
 
-        function initData() {
-            const saved = localStorage.getItem('redemptionCodes_v2');
-            if (saved) {
-                redemptionCodes = JSON.parse(saved);
-                updateStats();
-            }
-            checkUrlParams();
+<!-- 二维码弹窗 -->
+<div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
+        <div id="modalQr"></div>
+        <p id="modalCode" class="font-mono text-blue-600 my-3"></p>
+        <div class="flex gap-2">
+            <button onclick="copyNow()" class="flex-1 bg-blue-500 text-white py-2 rounded-lg">复制</button>
+            <button onclick="closeModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('codeData')) || {};
+    let nowCode = "";
+    const pwd = "2414777";
+
+    function checkSecret(){
+        let v = document.getElementById('secret-input').value.trim();
+        if(v === pwd){
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            checkUrlCode();
+        }else{
+            document.getElementById('errTip').classList.remove('hidden');
         }
+    }
+    function save(){
+        localStorage.setItem('codeData',JSON.stringify(data));
+    }
 
-        function saveData() {
-            localStorage.setItem('redemptionCodes_v2', JSON.stringify(redemptionCodes));
-            updateStats();
+    function switchTab(n){
+        document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-'+n).classList.remove('hidden');
+        document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
+        if(n==='records') showRecord();
+    }
+
+    function randomCode(){
+        let s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';
+        for(let i=0;i<12;i++){
+            if(i&&i%4===0) r+='-';
+            r+=s[Math.floor(Math.random()*s.length)];
         }
+        return r;
+    }
 
-        function switchTab(tab) {
-            ['redeem', 'generate', 'records'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                const btn = document.getElementById(`tab-${t}`);
-                btn.classList.remove('tab-active');
-                btn.classList.add('tab-inactive');
-            });
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            const activeBtn = document.getElementById(`tab-${tab}`);
-            activeBtn.classList.remove('tab-inactive');
-            activeBtn.classList.add('tab-active');
-            if (tab === 'records') updateRecordsTable();
+    function createCode(){
+        let w = document.getElementById('rewardTxt').value.trim();
+        let n = +document.getElementById('genNum').value;
+        if(!w) return alert('填写奖励内容');
+        let qrWrap = document.getElementById('qrBox');
+        let listWrap = document.getElementById('codeList');
+        qrWrap.innerHTML='<div class="grid grid-cols-2 gap-3" id="qrGrid"></div>';
+        listWrap.innerHTML='';
+
+        for(let i=0;i<n;i++){
+            let c;
+            do c=randomCode();while(data[c]);
+            data[c]={reward:w,used:false,time:'',remark:''};
+            save();
+
+            let item = document.createElement('div');
+            item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
+            item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
+            listWrap.appendChild(item);
+
+            let qrItem = document.createElement('div');
+            let d = document.createElement('div');
+            new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
+            qrItem.appendChild(d);
+            qrItem.onclick=()=>openQr(c);
+            document.getElementById('qrGrid').appendChild(qrItem);
         }
+        alert('生成完成');
+    }
 
-        function generateRandomCode() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let code = '';
-            for (let i = 0; i < 12; i++) {
-                if (i > 0 && i % 4 === 0) code += '-';
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
+    function doRedeem(){
+        let input = document.getElementById('redeemCode').value.toUpperCase().replace(/-/g,'');
+        if(input.length!==12) return tip('格式错误','red');
+        let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
+        if(!data[code]) return tip('无效兑换码','red');
+        if(data[code].used) return tip('已使用','red');
+
+        let rem = prompt('兑换成功，填写备注：')||'';
+        data[code].used=true;
+        data[code].time=new Date().toLocaleString();
+        data[code].remark=rem;
+        save();
+        tip('兑换成功 🎉','green');
+        document.getElementById('redeemCode').value='';
+    }
+
+    function tip(txt,color){
+        let el = document.getElementById('resTip');
+        el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
+        if(color==='green') el.className='mt-4 text-center hidden rounded-lg py-2 bg-green-100 text-green-700';
+        else el.className='mt-4 text-center hidden rounded-lg py-2 bg-red-100 text-red-700';
+        el.innerText=txt;el.classList.remove('hidden');
+        setTimeout(()=>el.classList.add('hidden'),3000);
+    }
+
+    function showRecord(){
+        let wrap = document.getElementById('recordBody');
+        let empty = document.getElementById('emptyTxt');
+        wrap.innerHTML='';
+        let arr = Object.entries(data);
+        if(!arr.length){empty.classList.remove('hidden');return;}
+        empty.classList.add('hidden');
+        arr.forEach(([c,d])=>{
+            let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
+            let dom = document.createElement('div');
+            dom.className='p-3 border-b border-gray-100';
+            dom.innerHTML=`
+                <div>码：${c}</div>
+                <div>奖励：${d.reward}</div>
+                <div>状态：${status}</div>
+                <div>备注：${d.remark||'无'}</div>
+            `;
+            wrap.appendChild(dom);
+        })
+    }
+
+    function openQr(c){
+        nowCode=c;
+        let m = document.getElementById('qrModal');
+        let q = document.getElementById('modalQr');
+        q.innerHTML='';
+        new QRCode(q,{text:location.origin+location.pathname+'?code='+c,width:160,height:160});
+        document.getElementById('modalCode').innerText=c;
+        m.classList.remove('hidden');
+    }
+    function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
+    function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
+    function copyNow(){copyTxt(nowCode);}
+
+    function checkUrlCode(){
+        let u = new URLSearchParams(location.search).get('code');
+        if(u){
+            switchTab('redeem');
+            document.getElementById('redeemCode').value=u.toUpperCase();
         }
-
-        function generateCodes() {
-            const reward = document.getElementById('reward-content').value.trim();
-            const count = parseInt(document.getElementById('generate-count').value) || 1;
-            if (!reward) { alert('请输入兑换内容！'); return; }
-            if (count < 1 || count > 20) { alert('1-20个'); return; }
-
-            const qrArea = document.getElementById('qr-display-area');
-            const codesList = document.getElementById('codes-list');
-            const generatedDiv = document.getElementById('generated-codes');
-            qrArea.innerHTML = '<div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="qr-grid"></div>';
-            codesList.innerHTML = '';
-            generatedDiv.classList.remove('hidden');
-
-            for (let i = 0; i < count; i++) {
-                let code;
-                do { code = generateRandomCode(); } while (redemptionCodes[code]);
-                redemptionCodes[code] = {
-                    reward: reward, used: false, usedTime: null, createdAt: new Date().toISOString()
-                };
-
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200';
-                item.innerHTML = `
-                    <div><span class="font-mono font-bold text-purple-700 text-lg">${code}</span>
-                    <span class="text-gray-500 text-sm ml-2">${reward}</span></div>
-                    <button onclick="copyCode('${code}')" class="text-blue-500 hover:text-blue-700 p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    </button>`;
-                codesList.appendChild(item);
-
-                const qrItem = document.createElement('div');
-                qrItem.className = 'qr-item bg-white p-4 rounded-xl shadow-md cursor-pointer flex flex-col items-center';
-                qrItem.onclick = () => showQrModal(code);
-                const qrDiv = document.createElement('div');
-                qrDiv.id = `qr-${i}`;
-                const codeLabel = document.createElement('div');
-                codeLabel.className = 'mt-2 text-xs text-gray-500 font-mono';
-                codeLabel.textContent = code;
-                qrItem.appendChild(qrDiv);
-                qrItem.appendChild(codeLabel);
-                document.getElementById('qr-grid').appendChild(qrItem);
-
-                const qrUrl = `${window.location.origin}${window.location.pathname}?code=${code}`;
-                new QRCode(qrDiv, { text: qrUrl, width: 120, height: 120 });
-            }
-            saveData();
-            const successDiv = document.createElement('div');
-            successDiv.className = 'mt-4 p-4 bg-green-100 text-green-700 rounded-lg text-center success-pulse flex items-center justify-center gap-2';
-            successDiv.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="font-bold">成功生成 ${count} 个兑换码！</span>`;
-            codesList.appendChild(successDiv);
-            document.getElementById('reward-content').value = '';
-            document.getElementById('generate-count').value = '1';
-        }
-
-        function showQrModal(code) {
-            currentModalCode = code;
-            const modal = document.getElementById('qr-modal');
-            const container = document.getElementById('modal-qr-container');
-            document.getElementById('modal-code-text').textContent = code;
-            container.innerHTML = '';
-            const qrUrl = `${window.location.origin}${window.location.pathname}?code=${code}`;
-            new QRCode(container, { text: qrUrl, width: 200, height: 200, colorDark: "#7c3aed" });
-            modal.classList.remove('hidden');
-        }
-
-        function closeQrModal(event) {
-            if (event.target === event.currentTarget)
-                document.getElementById('qr-modal').classList.add('hidden');
-        }
-
-        function copyFromModal() { copyCode(currentModalCode); }
-
-        function copyCode(code) {
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = event.target.closest('button');
-                const old = btn.innerHTML;
-                btn.innerHTML = '<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                setTimeout(() => btn.innerHTML = old, 1500);
-            });
-        }
-
-        function redeemCode() {
-            const input = document.getElementById('redeem-code');
-            const code = input.value.toUpperCase().trim();
-            const resultDiv = document.getElementById('redeem-result');
-            if (!code) { showResult('error', '请输入兑换码'); shakeElement(input); return; }
-            let norm = code.replace(/-/g, '');
-            if (norm.length !== 12) { showResult('error', '格式错误'); shakeElement(input); return; }
-            norm = norm.match(/.{1,4}/g).join('-');
-            if (!redemptionCodes[norm]) { showResult('error', '无效兑换码'); shakeElement(input); return; }
-            if (redemptionCodes[norm].used) { showResult('error', '已使用'); shakeElement(input); return; }
-            redemptionCodes[norm].used = true;
-            redemptionCodes[norm].usedTime = new Date().toISOString();
-            saveData();
-            const rw = redemptionCodes[norm].reward;
-            showResult('success', `<div class="success-pulse"><div class="text-5xl mb-3">🎉</div><div class="text-xl font-bold text-green-800 mb-2">兑换成功！</div><div class="bg-white/50 rounded-lg p-3 mt-2"><div class="text-sm text-gray-600">获得奖励</div><div class="text-lg font-bold text-purple-700">${rw}</div></div></div>`);
-            input.value = '';
-            setTimeout(() => resultDiv.classList.add('hidden'), 5000);
-        }
-
-        function showResult(type, msg) {
-            const d = document.getElementById('redeem-result');
-            d.classList.remove('hidden','bg-red-100','text-red-700','bg-green-100','text-green-700');
-            if (type === 'error')
-                d.className = 'mt-6 p-4 rounded-xl text-center bg-red-100 text-red-700 border border-red-200';
-            else
-                d.className = 'mt-6 p-4 rounded-xl text-center bg-green-100 text-green-700 border border-green-200';
-            d.innerHTML = msg;
-        }
-
-        function shakeElement(el) {
-            el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
-        }
-
-        function startScan() {
-            document.getElementById('scan-modal').classList.remove('hidden');
-        }
-
-        function updateStats() {
-            const arr = Object.entries(redemptionCodes);
-            const total = arr.length;
-            const used = arr.filter(([_,v])=>v.used).length;
-            document.getElementById('total-codes').textContent = total;
-            document.getElementById('used-codes').textContent = used;
-            document.getElementById('remaining-codes').textContent = total - used;
-        }
-
-        function updateRecordsTable() {
-            const tb = document.getElementById('records-table-body');
-            const empty = document.getElementById('empty-state');
-            tb.innerHTML = '';
-            const arr = Object.entries(redemptionCodes);
-            if (arr.length === 0) { empty.classList.remove('hidden'); return; }
-            empty.classList.add('hidden');
-            arr.sort((a,b)=>new Date(b[1].createdAt)-new Date(a[1].createdAt));
-            arr.forEach(([code,data])=>{
-                const tr = document.createElement('tr');
-                tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-                const cls = data.used ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
-                const txt = data.used ? '已使用' : '未使用';
-                tr.innerHTML = `
-<td class="py-3 px-4 font-mono">${code}</td>
-<td class="py-3 px-4">${data.reward}</td>
-<td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${cls}">${txt}</span></td>
-<td class="py-3 px-4 text-xs text-gray-500">${new Date(data.createdAt).toLocaleString()}</td>
-<td class="py-3 px-4 text-xs text-gray-500">${data.used ? new Date(data.usedTime).toLocaleString() : '-'}</td>
-<td class="py-3 px-4"><button onclick="showQrModal('${code}')" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">二维码</button> ${!data.used ? `<button onclick="deleteCode('${code}')" class="text-xs bg-red-50 text-red-600 px-2 py-1 rounded ml-1">删除</button>` : ''}</td>`;
-                tb.appendChild(tr);
-            });
-        }
-
-        function deleteCode(code) {
-            if (!confirm("删除？")) return;
-            delete redemptionCodes[code];
-            saveData(); updateRecordsTable();
-        }
-
-        function exportData() {
-            const blob = new Blob([JSON.stringify({version:2,codes:redemptionCodes},null,2)],{type:'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = '兑换码备份.json';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function importData(input) {
-            const f = input.files[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = e=>{
-                try{
-                    const d=JSON.parse(e.target.result);
-                    if(!confirm("覆盖重复，确定导入？")) return;
-                    redemptionCodes = {...redemptionCodes,...d.codes};
-                    saveData(); updateRecordsTable(); alert("成功");
-                }catch(e){alert("格式错误")}
-            };
-            r.readAsText(f); input.value='';
-        }
-
-        function clearAllData() {
-            if(!confirm("真清空？不可恢复！")) return;
-            redemptionCodes={}; saveData(); updateRecordsTable(); alert("已清空");
-        }
-
-        function checkUrlParams() {
-            const c = new URLSearchParams(location.search).get('code');
-            if(c){
-                setTimeout(()=>{
-                    switchTab('redeem');
-                    document.getElementById('redeem-code').value = c.toUpperCase();
-                },100);
-            }
-        }
-
-        window.onload = initData;
-    </script>
-    <script>
-      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/speed-insights/script.js"></script>
+    }
+</script>
 </body>
 </html>
