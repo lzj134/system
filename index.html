@@ -72,11 +72,16 @@
             text-align: center;
             outline: none;
             background: #fff;
-            position: relative;
             z-index: 1;
         }
         .input-field:focus {
             border-color: #0066ff;
+        }
+        .edit-btn {
+            color: #0066ff;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 8px;
         }
     </style>
 </head>
@@ -110,22 +115,18 @@
         </div>
     </div>
 
-    <!-- 兑换面板 -->
+    <!-- 兑换面板（只兑换，不填备注） -->
     <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
         <div class="text-center mb-6">
             <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
             <h2 class="text-xl font-bold text-gray-800 mt-3">输入兑换码</h2>
         </div>
         <input type="text" id="redeemCode" placeholder="XXXX-XXXX-XXXX" maxlength="14" class="input-field mb-4 uppercase">
-
-        <!-- 改成页面内备注输入 -->
-        <input type="text" id="remarkInput" placeholder="备注（选填）" class="input-field mb-4">
-
         <button onclick="doRedeem()" class="btn-primary">立即兑换</button>
         <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
     </div>
 
-    <!-- 生成面板 -->
+    <!-- 生成面板：二维码下方直接显示兑换码 -->
     <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
         <div class="space-y-4">
@@ -133,20 +134,21 @@
             <input type="number" id="genNum" value="1" min="1" max="20" class="input-field">
             <button onclick="createCode()" class="btn-primary">一键生成</button>
         </div>
-        <!-- 二维码+码直接显示在下面 -->
-        <div id="qrBox" class="bg-gray-50 rounded-lg p-4 min-h-[280px] flex items-center justify-center text-gray-400 mt-4">二维码区域</div>
+        <div id="qrBox" class="bg-gray-50 rounded-lg p-4 min-h-[280px] mt-4">
+            <div class="grid grid-cols-2 gap-4" id="qrGrid"></div>
+        </div>
         <div id="codeList" class="mt-4"></div>
     </div>
 
-    <!-- 记录面板 -->
+    <!-- 记录面板：全部都可以编辑备注 -->
     <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
+        <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录（可随时修改备注）</h2>
         <div id="recordBody" class="text-sm"></div>
         <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
     </div>
 </div>
 
-<!-- 二维码弹窗（保留，可放大看） -->
+<!-- 二维码弹窗 -->
 <div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
         <div id="modalQr"></div>
@@ -198,10 +200,9 @@
         let w = document.getElementById('rewardTxt').value.trim();
         let n = +document.getElementById('genNum').value;
         if(!w) return alert('填写奖励内容');
-        let qrWrap = document.getElementById('qrBox');
+        let qrGrid = document.getElementById('qrGrid');
         let listWrap = document.getElementById('codeList');
-        // 一行多个二维码，每个下面直接放兑换码
-        qrWrap.innerHTML='<div class="grid grid-cols-2 gap-4" id="qrGrid"></div>';
+        qrGrid.innerHTML='';
         listWrap.innerHTML='';
 
         for(let i=0;i<n;i++){
@@ -210,19 +211,17 @@
             data[c]={reward:w,used:false,time:'',remark:''};
             save();
 
-            // 每个二维码+文字
             let qrItem = document.createElement('div');
             qrItem.className='text-center';
             let d = document.createElement('div');
             new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
             qrItem.appendChild(d);
-            // 二维码下面直接显示兑换码
             let txt=document.createElement('div');
             txt.className='mt-1 text-sm font-mono text-blue-600';
             txt.textContent=c;
             qrItem.appendChild(txt);
             qrItem.onclick=()=>openQr(c);
-            document.getElementById('qrGrid').appendChild(qrItem);
+            qrGrid.appendChild(qrItem);
 
             let item = document.createElement('div');
             item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
@@ -239,29 +238,28 @@
         if(!data[code]) return tip('无效兑换码','red');
         if(data[code].used) return tip('已使用','red');
 
-        // 从输入框拿备注
-        let rem = document.getElementById('remarkInput').value.trim();
+        // 兑换时不填备注，直接标记已使用
         data[code].used=true;
         data[code].time=new Date().toLocaleString();
-        data[code].remark=rem;
         save();
         tip('兑换成功 🎉','green');
         document.getElementById('redeemCode').value='';
-        document.getElementById('remarkInput').value='';
     }
 
     function tip(txt,color){
         let el = document.getElementById('resTip');
         el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
         if(color==='green'){
-            el.className='mt-4 text-center hidden rounded-lg py-2 bg-green-100 text-green-700';
+            el.className='mt-4 text-center rounded-lg py-2 bg-green-100 text-green-700';
         }else{
-            el.className='mt-4 text-center hidden rounded-lg py-2 bg-red-100 text-red-700';
+            el.className='mt-4 text-center rounded-lg py-2 bg-red-100 text-red-700';
         }
-        el.innerText=txt;el.classList.remove('hidden');
+        el.innerText=txt;
+        el.classList.remove('hidden');
         setTimeout(()=>el.classList.add('hidden'),3000);
     }
 
+    // 所有记录 不管未使用/已使用 都能改备注
     function showRecord(){
         let wrap = document.getElementById('recordBody');
         let empty = document.getElementById('emptyTxt');
@@ -269,18 +267,35 @@
         let arr = Object.entries(data);
         if(!arr.length){empty.classList.remove('hidden');return;}
         empty.classList.add('hidden');
+
         arr.forEach(([c,d])=>{
             let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
+            let timeStr = d.time || '无';
             let dom = document.createElement('div');
             dom.className='p-3 border-b border-gray-100';
             dom.innerHTML=`
-                <div>码：${c}</div>
+                <div>兑换码：${c}</div>
                 <div>奖励：${d.reward}</div>
                 <div>状态：${status}</div>
-                <div>备注：${d.remark||'无'}</div>
+                <div>使用时间：${timeStr}</div>
+                <div>
+                    备注：<span id="rem_${c}">${d.remark||'暂无备注'}</span>
+                    <span class="edit-btn" onclick="editRemark('${c}')">编辑备注</span>
+                </div>
             `;
             wrap.appendChild(dom);
         })
+    }
+
+    // 修改备注弹窗，随便改、多次改
+    function editRemark(code){
+        let oldText = data[code].remark || '';
+        let newRem = prompt('修改备注', oldText);
+        if(newRem !== null){
+            data[code].remark = newRem;
+            save();
+            showRecord();
+        }
     }
 
     function openQr(c){
