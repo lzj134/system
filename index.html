@@ -3,165 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>免扫地卡管理系统</title>
+    <title>兑换码管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft Yahei", sans-serif;
         }
-        body {
-            background: linear-gradient(180deg, #1677ff 0%, #40a9ff 100%);
+        html, body {
             min-height: 100vh;
+            background: linear-gradient(135deg, #0066ff 0%, #3399ff 100%);
+            background-attachment: fixed;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        #auth-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            background: transparent;
+            color: white;
             padding: 20px;
         }
-        .header {
-            text-align: center;
-            color: white;
-            margin: 40px 0;
+        #main-content {
+            display: none;
+            padding: 20px;
         }
-        .gift-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            font-size: 38px;
-            margin-bottom: 15px;
-        }
-        .header p {
-            font-size: 22px;
-            opacity: 0.9;
-        }
-        .tab-group {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
+        .glass-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
         }
         .tab-btn {
-            padding: 15px 35px;
+            padding: 10px 20px;
+            border-radius: 999px;
             border: none;
-            border-radius: 30px;
-            font-size: 20px;
-            background: rgba(255,255,255,0.2);
-            color: white;
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.85);
             cursor: pointer;
         }
         .tab-btn.active {
             background: white;
-            color: #1677ff;
+            color: #0066ff;
+            box-shadow: 0 4px 12px rgba(0,102,255,0.2);
         }
-        .record-card {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 600px;
-            margin: 0 auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .record-title {
-            font-size: 30px;
-            font-weight: bold;
-            margin-bottom: 25px;
-            color: #333;
-        }
-        .record-info p {
-            font-size: 20px;
-            margin: 12px 0;
-            color: #333;
-        }
-        .status-unused {
-            color: #52c41a;
-            font-weight: bold;
-        }
-        .edit-note {
-            color: #1677ff;
-            text-decoration: none;
-            margin-left: 8px;
-        }
-        .delete-btn {
-            background: #ff4d4f;
+        .btn-primary {
+            background: linear-gradient(135deg, #0066ff, #3399ff);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            width: 100%;
             cursor: pointer;
-            margin-top: 20px;
-            float: right;
         }
-        .delete-btn:hover {
-            background: #ff7875;
+        .input-field {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #cce0ff;
+            border-radius: 12px;
+            text-align: center;
+            outline: none;
+            background: #fff;
+            position: relative;
+            z-index: 1;
         }
-        /* 清空浮动 */
-        .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
+        .input-field:focus {
+            border-color: #0066ff;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="gift-icon">🎁</div>
-        <h1>免扫地卡管理系统</h1>
-        <p>生成 · 兑换 · 记录管理</p>
+
+<!-- 登录页 -->
+<div id="auth-screen">
+    <div class="glass-card text-center">
+        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
+        <h2 class="text-xl font-bold text-gray-800 mt-4 mb-2">访问验证</h2>
+        <p class="text-gray-500 text-sm mb-6">请输入密钥进入系统</p>
+        <input type="password" id="secret-input" placeholder="输入密钥" class="input-field mb-4">
+        <button onclick="checkSecret()" class="btn-primary">进入系统</button>
+        <div id="errTip" class="text-red-500 text-sm mt-3 hidden">密钥错误，请重试</div>
+    </div>
+</div>
+
+<!-- 主页面 -->
+<div id="main-content" class="max-w-5xl mx-auto">
+    <div class="text-center text-white mt-6 mb-8">
+        <div class="text-5xl mb-2">🎁</div>
+        <h1 class="text-3xl font-bold">兑换码管理系统</h1>
+        <p class="opacity-80 mt-2">生成 · 兑换 · 记录管理</p>
     </div>
 
-    <div class="tab-group">
-        <button class="tab-btn">免扫地卡兑换</button>
-        <button class="tab-btn">生成兑换码</button>
-        <button class="tab-btn active">兑换记录</button>
-    </div>
-
-    <div class="record-card clearfix">
-        <div class="record-title">兑换记录</div>
-        <div class="record-info">
-            <p>兑换码: GJHK-MJM7-BQKL</p>
-            <p>奖励: @111</p>
-            <p>状态: <span class="status-unused">未使用</span></p>
-            <p>使用时间: 无</p>
-            <p>备注: 暂无备注 <a href="#" class="edit-note">编辑备注</a></p>
+    <div class="flex justify-center mb-8">
+        <div class="bg-white/15 rounded-full p-1 flex gap-1">
+            <button onclick="switchTab('redeem')" class="tab-btn active" data-tab="redeem">兑换码兑换</button>
+            <button onclick="switchTab('generate')" class="tab-btn" data-tab="generate">生成兑换码</button>
+            <button onclick="switchTab('records')" class="tab-btn" data-tab="records">兑换记录</button>
         </div>
-        <button class="delete-btn" onclick="deleteRecord('GJHK-MJM7-BQKL', this)">删除记录</button>
     </div>
 
-    <script>
-        // 删除记录的完整逻辑
-        function deleteRecord(code, btn) {
-            // 1. 二次确认，防止误删
-            if (!confirm('⚠️ 确定要删除这条兑换记录吗？删除后无法恢复！')) {
-                return;
-            }
+    <!-- 兑换面板 -->
+    <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
+            <h2 class="text-xl font-bold text-gray-800 mt-3">输入兑换码</h2>
+        </div>
+        <input type="text" id="redeemCode" placeholder="XXXX-XXXX-XXXX" maxlength="14" class="input-field mb-4 uppercase">
 
-            // 2. 禁用按钮，防止重复点击
-            btn.disabled = true;
-            btn.textContent = '删除中...';
+        <!-- 改成页面内备注输入 -->
+        <input type="text" id="remarkInput" placeholder="备注（选填）" class="input-field mb-4">
 
-            // 3. 调用后端删除接口
-            fetch('/api/delete-record.php?code=' + code, {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ 删除成功！');
-                    // 前端移除卡片，刷新页面也可以
-                    const card = btn.closest('.record-card');
-                    card.remove();
-                } else {
-                    alert('❌ 删除失败：' + data.msg);
-                    btn.disabled = false;
-                    btn.textContent = '删除记录';
-                }
-            })
-            .catch(error => {
-                alert('❌ 网络错误，请检查后端接口是否正常');
-                btn.disabled = false;
-                btn.textContent = '删除记录';
-            });
+        <button onclick="doRedeem()" class="btn-primary">立即兑换</button>
+        <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
+    </div>
+
+    <!-- 生成面板 -->
+    <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
+        <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
+        <div class="space-y-4">
+            <input type="text" id="rewardTxt" placeholder="奖励内容" class="input-field">
+            <input type="number" id="genNum" value="1" min="1" max="20" class="input-field">
+            <button onclick="createCode()" class="btn-primary">一键生成</button>
+        </div>
+        <!-- 二维码+码直接显示在下面 -->
+        <div id="qrBox" class="bg-gray-50 rounded-lg p-4 min-h-[280px] flex items-center justify-center text-gray-400 mt-4">二维码区域</div>
+        <div id="codeList" class="mt-4"></div>
+    </div>
+
+    <!-- 记录面板 -->
+    <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
+        <div id="recordBody" class="text-sm"></div>
+        <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
+    </div>
+</div>
+
+<!-- 二维码弹窗（保留，可放大看） -->
+<div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
+        <div id="modalQr"></div>
+        <p id="modalCode" class="font-mono text-blue-600 my-3"></p>
+        <div class="flex gap-2">
+            <button onclick="copyNow()" class="flex-1 bg-blue-500 text-white py-2 rounded-lg">复制</button>
+            <button onclick="closeModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('codeData')) || {};
+    let nowCode = "";
+    const pwd = "2414777";
+
+    function checkSecret(){
+        let v = document.getElementById('secret-input').value.trim();
+        if(v === pwd){
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            checkUrlCode();
+        }else{
+            document.getElementById('errTip').classList.remove('hidden');
         }
-    </script>
+    }
+    function save(){
+        localStorage.setItem('codeData',JSON.stringify(data));
+    }
+
+    function switchTab(n){
+        document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-'+n).classList.remove('hidden');
+        document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
+        if(n==='records') showRecord();
+    }
+
+    function randomCode(){
+        let s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';
+        for(let i=0;i<12;i++){
+            if(i&&i%4===0) r+='-';
+            r+=s[Math.floor(Math.random()*s.length)];
+        }
+        return r;
+    }
+
+    function createCode(){
+        let w = document.getElementById('rewardTxt').value.trim();
+        let n = +document.getElementById('genNum').value;
+        if(!w) return alert('填写奖励内容');
+        let qrWrap = document.getElementById('qrBox');
+        let listWrap = document.getElementById('codeList');
+        // 一行多个二维码，每个下面直接放兑换码
+        qrWrap.innerHTML='<div class="grid grid-cols-2 gap-4" id="qrGrid"></div>';
+        listWrap.innerHTML='';
+
+        for(let i=0;i<n;i++){
+            let c;
+            do c=randomCode();while(data[c]);
+            data[c]={reward:w,used:false,time:'',remark:''};
+            save();
+
+            // 每个二维码+文字
+            let qrItem = document.createElement('div');
+            qrItem.className='text-center';
+            let d = document.createElement('div');
+            new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
+            qrItem.appendChild(d);
+            // 二维码下面直接显示兑换码
+            let txt=document.createElement('div');
+            txt.className='mt-1 text-sm font-mono text-blue-600';
+            txt.textContent=c;
+            qrItem.appendChild(txt);
+            qrItem.onclick=()=>openQr(c);
+            document.getElementById('qrGrid').appendChild(qrItem);
+
+            let item = document.createElement('div');
+            item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
+            item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
+            listWrap.appendChild(item);
+        }
+        alert('生成完成');
+    }
+
+    function doRedeem(){
+        let input = document.getElementById('redeemCode').value.toUpperCase().replace(/-/g,'');
+        if(input.length!==12) return tip('格式错误','red');
+        let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
+        if(!data[code]) return tip('无效兑换码','red');
+        if(data[code].used) return tip('已使用','red');
+
+        // 从输入框拿备注
+        let rem = document.getElementById('remarkInput').value.trim();
+        data[code].used=true;
+        data[code].time=new Date().toLocaleString();
+        data[code].remark=rem;
+        save();
+        tip('兑换成功 🎉','green');
+        document.getElementById('redeemCode').value='';
+        document.getElementById('remarkInput').value='';
+    }
+
+    function tip(txt,color){
+        let el = document.getElementById('resTip');
+        el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
+        if(color==='green'){
+            el.className='mt-4 text-center hidden rounded-lg py-2 bg-green-100 text-green-700';
+        }else{
+            el.className='mt-4 text-center hidden rounded-lg py-2 bg-red-100 text-red-700';
+        }
+        el.innerText=txt;el.classList.remove('hidden');
+        setTimeout(()=>el.classList.add('hidden'),3000);
+    }
+
+    function showRecord(){
+        let wrap = document.getElementById('recordBody');
+        let empty = document.getElementById('emptyTxt');
+        wrap.innerHTML='';
+        let arr = Object.entries(data);
+        if(!arr.length){empty.classList.remove('hidden');return;}
+        empty.classList.add('hidden');
+        arr.forEach(([c,d])=>{
+            let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
+            let dom = document.createElement('div');
+            dom.className='p-3 border-b border-gray-100';
+            dom.innerHTML=`
+                <div>码：${c}</div>
+                <div>奖励：${d.reward}</div>
+                <div>状态：${status}</div>
+                <div>备注：${d.remark||'无'}</div>
+            `;
+            wrap.appendChild(dom);
+            <?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *'); // 跨域配置，本地调试用，上线可以改成你的域名
+
+// 替换成你自己的数据库信息
+$db_host = 'localhost';      // 数据库地址，一般不变
+$db_user = 'root';          // 数据库用户名
+$db_pwd = '你的数据库密码'; // 你的数据库密码
+$db_name = '你的数据库名';  // 你的系统用的数据库名
+$table_name = '兑换记录表'; // 你存兑换记录的表名
+
+// 连接数据库
+$conn = mysqli_connect($db_host, $db_user, $db_pwd, $db_name);
+if (!$conn) {
+    echo json_encode([
+        'success' => false,
+        'msg' => '数据库连接失败：' . mysqli_connect_error()
+    ]);
+    exit;
+}
+mysqli_set_charset($conn, 'utf8mb4');
+
+// 获取要删除的兑换码
+$code = isset($_GET['code']) ? trim($_GET['code']) : '';
+if (empty($code)) {
+    echo json_encode([
+        'success' => false,
+        'msg' => '兑换码不能为空'
+    ]);
+    exit;
+}
+
+// 执行删除SQL（用预处理语句防止SQL注入）
+$sql = "DELETE FROM {$table_name} WHERE 兑换码 = ?";
+$stmt = mysqli_prepare($conn, $sql);
+mysqli_stmt_bind_param($stmt, "s", $code);
+$exec = mysqli_stmt_execute($stmt);
+
+if (!$exec) {
+    echo json_encode([
+        'success' => false,
+        'msg' => '删除执行失败：' . mysqli_error($conn)
+    ]);
+    exit;
+}
+
+// 判断是否删除成功
+if (mysqli_stmt_affected_rows($stmt) > 0) {
+    echo json_encode([
+        'success' => true,
+        'msg' => '记录已删除'
+    ]);
+} else {
+    echo json_encode([
+        'success' => false,
+        'msg' => '未找到该兑换码对应的记录，或已被删除'
+    ]);
+}
+
+// 关闭连接
+mysqli_stmt_close($stmt);
+mysqli_close($conn);
+?>
+        })
+    }
+
+    function openQr(c){
+        nowCode=c;
+        let m = document.getElementById('qrModal');
+        let q = document.getElementById('modalQr');
+        q.innerHTML='';
+        new QRCode(q,{text:location.origin+location.pathname+'?code='+c,width:160,height:160});
+        document.getElementById('modalCode').innerText=c;
+        m.classList.remove('hidden');
+    }
+    function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
+    function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
+    function copyNow(){copyTxt(nowCode);}
+
+    function checkUrlCode(){
+        let u = new URLSearchParams(location.search).get('code');
+        if(u){
+            switchTab('redeem');
+            document.getElementById('redeemCode').value=u.toUpperCase();
+        }
+    }
+</script>
 </body>
 </html>
