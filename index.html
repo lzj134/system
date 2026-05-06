@@ -64,6 +64,16 @@
             width: 100%;
             cursor: pointer;
         }
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4444, #ff6666);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+        }
         .input-field {
             width: 100%;
             padding: 14px;
@@ -83,11 +93,16 @@
             cursor: pointer;
             margin-left: 8px;
         }
+        .delete-btn {
+            color: #ff4444;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
 
-<!-- 登录页 -->
 <div id="auth-screen">
     <div class="glass-card text-center">
         <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
@@ -99,7 +114,6 @@
     </div>
 </div>
 
-<!-- 主页面 -->
 <div id="main-content" class="max-w-5xl mx-auto">
     <div class="text-center text-white mt-6 mb-8">
         <div class="text-5xl mb-2">🎁</div>
@@ -112,10 +126,10 @@
             <button onclick="switchTab('redeem')" class="tab-btn active" data-tab="redeem">兑换码兑换</button>
             <button onclick="switchTab('generate')" class="tab-btn" data-tab="generate">生成兑换码</button>
             <button onclick="switchTab('records')" class="tab-btn" data-tab="records">兑换记录</button>
+            <button onclick="switchTab('clean')" class="tab-btn" data-tab="clean">免扫地人员</button>
         </div>
     </div>
 
-    <!-- 兑换面板（只兑换，不填备注） -->
     <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
         <div class="text-center mb-6">
             <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
@@ -126,7 +140,6 @@
         <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
     </div>
 
-    <!-- 生成面板：二维码下方直接显示兑换码 -->
     <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
         <div class="space-y-4">
@@ -140,15 +153,26 @@
         <div id="codeList" class="mt-4"></div>
     </div>
 
-    <!-- 记录面板：全部都可以编辑备注 -->
     <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
+        <div class="mb-4">
+            <button onclick="deleteAllCodes()" class="btn-danger">清空所有兑换码</button>
+        </div>
         <div id="recordBody" class="text-sm"></div>
         <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
     </div>
+
+    <div id="tab-clean" class="glass-card p-6 max-w-4xl mx-auto hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">免扫地人员管理</h2>
+        <div class="space-y-4 mb-6">
+            <input type="text" id="cleanName" placeholder="输入人员姓名" class="input-field">
+            <button onclick="addCleanPerson()" class="btn-primary">添加免扫地人员</button>
+        </div>
+        <div id="cleanBody" class="text-sm"></div>
+        <div id="cleanEmpty" class="text-center text-gray-400 py-8">暂无免扫地人员</div>
+    </div>
 </div>
 
-<!-- 二维码弹窗 -->
 <div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
         <div id="modalQr"></div>
@@ -162,8 +186,16 @@
 
 <script>
     let data = JSON.parse(localStorage.getItem('codeData')) || {};
+    let cleanData = JSON.parse(localStorage.getItem('cleanData')) || [];
     let nowCode = "";
     const pwd = "2414777";
+
+    function save(){
+        localStorage.setItem('codeData',JSON.stringify(data));
+    }
+    function saveClean(){
+        localStorage.setItem('cleanData',JSON.stringify(cleanData));
+    }
 
     function checkSecret(){
         let v = document.getElementById('secret-input').value.trim();
@@ -175,9 +207,6 @@
             document.getElementById('errTip').classList.remove('hidden');
         }
     }
-    function save(){
-        localStorage.setItem('codeData',JSON.stringify(data));
-    }
 
     function switchTab(n){
         document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
@@ -185,6 +214,7 @@
         document.getElementById('tab-'+n).classList.remove('hidden');
         document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
         if(n==='records') showRecord();
+        if(n==='clean') showClean();
     }
 
     function randomCode(){
@@ -204,13 +234,11 @@
         let listWrap = document.getElementById('codeList');
         qrGrid.innerHTML='';
         listWrap.innerHTML='';
-
         for(let i=0;i<n;i++){
             let c;
             do c=randomCode();while(data[c]);
             data[c]={reward:w,used:false,time:'',remark:''};
             save();
-
             let qrItem = document.createElement('div');
             qrItem.className='text-center';
             let d = document.createElement('div');
@@ -222,7 +250,6 @@
             qrItem.appendChild(txt);
             qrItem.onclick=()=>openQr(c);
             qrGrid.appendChild(qrItem);
-
             let item = document.createElement('div');
             item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
             item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
@@ -237,8 +264,6 @@
         let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
         if(!data[code]) return tip('无效兑换码','red');
         if(data[code].used) return tip('已使用','red');
-
-        // 兑换时不填备注，直接标记已使用
         data[code].used=true;
         data[code].time=new Date().toLocaleString();
         save();
@@ -259,7 +284,6 @@
         setTimeout(()=>el.classList.add('hidden'),3000);
     }
 
-    // 所有记录 不管未使用/已使用 都能改备注
     function showRecord(){
         let wrap = document.getElementById('recordBody');
         let empty = document.getElementById('emptyTxt');
@@ -267,7 +291,6 @@
         let arr = Object.entries(data);
         if(!arr.length){empty.classList.remove('hidden');return;}
         empty.classList.add('hidden');
-
         arr.forEach(([c,d])=>{
             let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
             let timeStr = d.time || '无';
@@ -281,13 +304,29 @@
                 <div>
                     备注：<span id="rem_${c}">${d.remark||'暂无备注'}</span>
                     <span class="edit-btn" onclick="editRemark('${c}')">编辑备注</span>
+                    <span class="delete-btn" onclick="deleteSingleCode('${c}')">删除</span>
                 </div>
             `;
             wrap.appendChild(dom);
         })
     }
 
-    // 修改备注弹窗，随便改、多次改
+    function deleteSingleCode(code){
+        if(confirm('确定删除此兑换码？')){
+            delete data[code];
+            save();
+            showRecord();
+        }
+    }
+
+    function deleteAllCodes(){
+        if(confirm('确定清空所有兑换码？不可恢复！')){
+            data = {};
+            save();
+            showRecord();
+        }
+    }
+
     function editRemark(code){
         let oldText = data[code].remark || '';
         let newRem = prompt('修改备注', oldText);
@@ -307,6 +346,7 @@
         document.getElementById('modalCode').innerText=c;
         m.classList.remove('hidden');
     }
+
     function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
     function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
     function copyNow(){copyTxt(nowCode);}
@@ -316,6 +356,42 @@
         if(u){
             switchTab('redeem');
             document.getElementById('redeemCode').value=u.toUpperCase();
+        }
+    }
+
+    // 免扫地人员
+    function showClean(){
+        let wrap = document.getElementById('cleanBody');
+        let empty = document.getElementById('cleanEmpty');
+        wrap.innerHTML='';
+        if(!cleanData.length){empty.classList.remove('hidden');return;}
+        empty.classList.add('hidden');
+        cleanData.forEach((name, index)=>{
+            let dom = document.createElement('div');
+            dom.className='p-3 border-b border-gray-100 flex justify-between items-center';
+            dom.innerHTML=`
+                <span>${name}</span>
+                <button onclick="deleteCleanPerson(${index})" class="delete-btn">删除</button>
+            `;
+            wrap.appendChild(dom);
+        })
+    }
+
+    function addCleanPerson(){
+        let name = document.getElementById('cleanName').value.trim();
+        if(!name) return alert('请输入姓名');
+        if(cleanData.includes(name)) return alert('已存在');
+        cleanData.push(name);
+        saveClean();
+        showClean();
+        document.getElementById('cleanName').value='';
+    }
+
+    function deleteCleanPerson(index){
+        if(confirm('确定删除？')){
+            cleanData.splice(index, 1);
+            saveClean();
+            showClean();
         }
     }
 </script>
