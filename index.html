@@ -180,7 +180,7 @@
 
 <script>
 // ===================== Supabase配置 修改这里 =====================
-const SUPABASE_URL = "http://qxnguajnmjltegcihuzj.supabase.co";
+const SUPABASE_URL = "https://qxnguajnmjltegcihuzj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux";
 // =================================================================
 
@@ -199,7 +199,7 @@ async function sha256(text){
     return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-//校验密码（哈希比对，前端没有存明文密码）
+//校验密码
 async function checkSecret(){
     let v = document.getElementById('secret-input').value.trim();
     const inputHash = await sha256(v);
