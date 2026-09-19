@@ -201,7 +201,7 @@ async function sha256(text){
 
 //校验密码
 async function checkSecret(){
-    let v = document.getElementById('secret-input').value.trim();
+    let v = document.getElementById('adminPwd').value.trim();
     const inputHash = await sha256(v);
     if(inputHash === ADMIN_PASSWORD_HASH){
         document.getElementById('auth-screen').style.display = 'none';
@@ -212,6 +212,15 @@ async function checkSecret(){
     }
 }
 
+// 密码显示隐藏
+function toggleEye(){
+  const input = document.getElementById("adminPwd");
+  if(input.type === "password"){
+    input.type = "text";
+  }else{
+    input.type = "password";
+  }
+}
 // 读取兑换码表
 async function loadAllCodes() {
   const { data, error } = await supabase.from("codes").select("*");
