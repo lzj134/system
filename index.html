@@ -177,12 +177,11 @@
         </div>
     </div>
 </div>
-
 <script>
-// ===================== Supabase配置 修改这里 =====================
-const SUPABASE_URL = "https://qxnguajnmjltegcihuzj.supabase.co";
+// =================== Supabase配置 修改这里 ===================
+const SUPABASE_URL = "https://qxnguajnmj1tegcihuzj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux";
-// =================================================================
+// =============================================================
 
 // 密码
 const ADMIN_PASSWORD_HASH = "33b6524013435235366f77220120416309240510792136612001371352140174";
@@ -192,27 +191,27 @@ let nowCode = "";
 
 /** 计算SHA256哈希 */
 async function sha256(text){
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
 //校验密码
 async function checkSecret(){
-    let v = document.getElementById('adminPwd').value.trim();
-    const inputHash = await sha256(v);
-    if(inputHash === ADMIN_PASSWORD_HASH){
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
-        checkUrlCode();
-    }else{
-        document.getElementById('errTip').classList.remove('hidden');
-    }
+  let v = document.getElementById('adminPwd').value.trim();
+  const inputHash = await sha256(v);
+  if(inputHash === ADMIN_PASSWORD_HASH){
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    checkUrlCode();
+  }else{
+    document.getElementById('errTip').classList.remove('hidden');
+  }
 }
 
-// 密码显示隐藏
+// 密码显示隐藏按钮
 function toggleEye(){
   const input = document.getElementById("adminPwd");
   if(input.type === "password"){
@@ -221,6 +220,7 @@ function toggleEye(){
     input.type = "password";
   }
 }
+
 // 读取兑换码表
 async function loadAllCodes() {
   const { data, error } = await supabase.from("codes").select("*");
@@ -231,7 +231,6 @@ async function loadAllCodes() {
       reward: item.reward,
       used: item.used,
       time: item.use_time,
-      remark: item.remark
     }
   })
   return obj;
