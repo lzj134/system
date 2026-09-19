@@ -6,6 +6,7 @@
     <title>免扫地卡管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -102,26 +103,23 @@
     </style>
 </head>
 <body>
-
 <div id="auth-screen">
     <div class="glass-card text-center">
         <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
         <h2 class="text-xl font-bold text-gray-800 mt-4 mb-2">访问验证</h2>
         <p class="text-gray-500 text-sm mb-6">请输入密钥进入系统</p>
-        <p class="text-gray-500 text-sm mb-6">需要兑换请联系管理员，班长或卫生委员廖志强</p >
+        <p class="text-gray-500 text-sm mb-6">需要兑换请联系管理员，班长或卫生委员廖志强</p>
         <input type="password" id="secret-input" placeholder="输入密钥" class="input-field mb-4">
         <button onclick="checkSecret()" class="btn-primary">进入系统</button>
         <div id="errTip" class="text-red-500 text-sm mt-3 hidden">密钥错误，请重试</div>
     </div>
 </div>
-
 <div id="main-content" class="max-w-5xl mx-auto">
     <div class="text-center text-white mt-6 mb-8">
         <div class="text-5xl mb-2">( ˶ ❛ ꁞ ❛ ˶ )</div>
         <h1 class="text-3xl font-bold">免扫地卡管理系统</h1>
         <p class="opacity-80 mt-2">生成 · 兑换 · 记录管理</p>
     </div>
-
     <div class="flex justify-center mb-8">
         <div class="bg-white/15 rounded-full p-1 flex gap-1">
             <button onclick="switchTab('redeem')" class="tab-btn active" data-tab="redeem">兑换码兑换</button>
@@ -130,7 +128,6 @@
             <button onclick="switchTab('clean')" class="tab-btn" data-tab="clean">免扫地人员表</button>
         </div>
     </div>
-
     <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
         <div class="text-center mb-6">
             <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
@@ -140,7 +137,6 @@
         <button onclick="doRedeem()" class="btn-primary">立即兑换</button>
         <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
     </div>
-
     <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
         <div class="space-y-4">
@@ -153,7 +149,6 @@
         </div>
         <div id="codeList" class="mt-4"></div>
     </div>
-
     <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
         <div class="mb-4">
@@ -162,7 +157,6 @@
         <div id="recordBody" class="text-sm"></div>
         <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
     </div>
-
     <div id="tab-clean" class="glass-card p-6 max-w-4xl mx-auto hidden">
         <h2 class="text-xl font-bold text-gray-800 mb-4">免扫地人员管理表</h2>
         <div class="space-y-4 mb-6">
@@ -173,7 +167,6 @@
         <div id="cleanEmpty" class="text-center text-gray-400 py-8">暂无人员安排</div>
     </div>
 </div>
-
 <div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
         <div id="modalQr"></div>
@@ -186,215 +179,259 @@
 </div>
 
 <script>
-    let data = JSON.parse(localStorage.getItem('codeData')) || {};
-    let cleanData = JSON.parse(localStorage.getItem('cleanData')) || [];
-    let nowCode = "";
-    const pwd = "2414777";
+// ===================== Supabase配置 修改这里 =====================
+const SUPABASE_URL = "http://qxnguajnmjltegcihuzj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux";
+// =================================================================
 
-    function save(){
-        localStorage.setItem('codeData',JSON.stringify(data));
-    }
-    function saveClean(){
-        localStorage.setItem('cleanData',JSON.stringify(cleanData));
-    }
+// 密码
+const ADMIN_PASSWORD_HASH = "33b6524013435235366f77220120416309240510792136612001371352140174";
 
-    function checkSecret(){
-        let v = document.getElementById('secret-input').value.trim();
-        if(v === pwd){
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            checkUrlCode();
-        }else{
-            document.getElementById('errTip').classList.remove('hidden');
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let nowCode = "";
+
+/** 计算SHA256哈希 */
+async function sha256(text){
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+//校验密码（哈希比对，前端没有存明文密码）
+async function checkSecret(){
+    let v = document.getElementById('secret-input').value.trim();
+    const inputHash = await sha256(v);
+    if(inputHash === ADMIN_PASSWORD_HASH){
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        checkUrlCode();
+    }else{
+        document.getElementById('errTip').classList.remove('hidden');
+    }
+}
+
+// 读取兑换码表
+async function loadAllCodes() {
+  const { data, error } = await supabase.from("codes").select("*");
+  if (error) { alert("读取兑换码失败：" + error.message); return {}; }
+  let obj = {};
+  data.forEach(item => {
+    obj[item.code] = {
+      reward: item.reward,
+      used: item.used,
+      time: item.use_time,
+      remark: item.remark
+    }
+  })
+  return obj;
+}
+
+//读取免扫地人员
+async function loadCleanPersons() {
+  const { data, error } = await supabase.from("clean_person").select("name");
+  if (error) { alert("读取人员失败：" + error.message); return []; }
+  return data.map(i => i.name);
+}
+
+function switchTab(n){
+    document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-'+n).classList.remove('hidden');
+    document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
+    if(n==='records') showRecord();
+    if(n==='clean') showClean();
+}
+
+function randomCode(){
+    let s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';
+    for(let i=0;i<12;i++){
+        if(i&&i%4===0) r+='-';
+        r+=s[Math.floor(Math.random()*s.length)];
+    }
+    return r;
+}
+
+async function createCode(){
+    let w = document.getElementById('rewardTxt').value.trim();
+    let n = +document.getElementById('genNum').value;
+    if(!w) return alert('填写奖励内容');
+    let qrGrid = document.getElementById('qrGrid');
+    let listWrap = document.getElementById('codeList');
+    qrGrid.innerHTML='';
+    listWrap.innerHTML='';
+    let cloudData = await loadAllCodes();
+    for(let i=0;i<n;i++){
+        let c;
+        do c=randomCode();while(cloudData[c]);
+        const {error}=await supabase.from("codes").insert({
+            code:c,
+            reward:w,
+            used:false,
+            use_time:"",
+            remark:""
+        });
+        if(error){
+            alert("生成失败："+error.message);
+            continue;
         }
+        let qrItem = document.createElement('div');
+        qrItem.className='text-center';
+        let d = document.createElement('div');
+        new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
+        qrItem.appendChild(d);
+        let txt=document.createElement('div');
+        txt.className='mt-1 text-sm font-mono text-blue-600';
+        txt.textContent=c;
+        qrItem.appendChild(txt);
+        qrItem.onclick=()=>openQr(c);
+        qrGrid.appendChild(qrItem);
+        let item = document.createElement('div');
+        item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
+        item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
+        listWrap.appendChild(item);
     }
+    alert('生成完成');
+}
 
-    function switchTab(n){
-        document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-'+n).classList.remove('hidden');
-        document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
-        if(n==='records') showRecord();
-        if(n==='clean') showClean();
+async function doRedeem(){
+    let input = document.getElementById('redeemCode').value.toUpperCase().replace(/-/g,'');
+    if(input.length!==12) return tip('格式错误','red');
+    let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
+    const {data:row,error}=await supabase.from("codes").select("*").eq("code",code).single();
+    if(error || !row) return tip('无效兑换码','red');
+    if(row.used) return tip('已使用','red');
+    const nowStr=new Date().toLocaleString();
+    const {error:err2}=await supabase.from("codes").update({used:true,use_time:nowStr}).eq("code",code);
+    if(err2) return tip("兑换失败","red");
+    tip('兑换成功 🎉','green');
+    document.getElementById('redeemCode').value='';
+}
+
+function tip(txt,color){
+    let el = document.getElementById('resTip');
+    el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
+    if(color==='green'){
+        el.className='mt-4 text-center rounded-lg py-2 bg-green-100 text-green-700';
+    }else{
+        el.className='mt-4 text-center rounded-lg py-2 bg-red-100 text-red-700';
     }
+    el.innerText=txt;
+    el.classList.remove('hidden');
+    setTimeout(()=>el.classList.add('hidden'),3000);
+}
 
-    function randomCode(){
-        let s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';
-        for(let i=0;i<12;i++){
-            if(i&&i%4===0) r+='-';
-            r+=s[Math.floor(Math.random()*s.length)];
-        }
-        return r;
-    }
-
-    function createCode(){
-        let w = document.getElementById('rewardTxt').value.trim();
-        let n = +document.getElementById('genNum').value;
-        if(!w) return alert('填写奖励内容');
-        let qrGrid = document.getElementById('qrGrid');
-        let listWrap = document.getElementById('codeList');
-        qrGrid.innerHTML='';
-        listWrap.innerHTML='';
-        for(let i=0;i<n;i++){
-            let c;
-            do c=randomCode();while(data[c]);
-            data[c]={reward:w,used:false,time:'',remark:''};
-            save();
-            let qrItem = document.createElement('div');
-            qrItem.className='text-center';
-            let d = document.createElement('div');
-            new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
-            qrItem.appendChild(d);
-            let txt=document.createElement('div');
-            txt.className='mt-1 text-sm font-mono text-blue-600';
-            txt.textContent=c;
-            qrItem.appendChild(txt);
-            qrItem.onclick=()=>openQr(c);
-            qrGrid.appendChild(qrItem);
-            let item = document.createElement('div');
-            item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
-            item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
-            listWrap.appendChild(item);
-        }
-        alert('生成完成');
-    }
-
-    function doRedeem(){
-        let input = document.getElementById('redeemCode').value.toUpperCase().replace(/-/g,'');
-        if(input.length!==12) return tip('格式错误','red');
-        let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
-        if(!data[code]) return tip('无效兑换码','red');
-        if(data[code].used) return tip('已使用','red');
-        data[code].used=true;
-        data[code].time=new Date().toLocaleString();
-        save();
-        tip('兑换成功 🎉','green');
-        document.getElementById('redeemCode').value='';
-    }
-
-    function tip(txt,color){
-        let el = document.getElementById('resTip');
-        el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
-        if(color==='green'){
-            el.className='mt-4 text-center rounded-lg py-2 bg-green-100 text-green-700';
-        }else{
-            el.className='mt-4 text-center rounded-lg py-2 bg-red-100 text-red-700';
-        }
-        el.innerText=txt;
-        el.classList.remove('hidden');
-        setTimeout(()=>el.classList.add('hidden'),3000);
-    }
-
-    function showRecord(){
-        let wrap = document.getElementById('recordBody');
-        let empty = document.getElementById('emptyTxt');
-        wrap.innerHTML='';
-        let arr = Object.entries(data);
-        if(!arr.length){empty.classList.remove('hidden');return;}
-        empty.classList.add('hidden');
-        arr.forEach(([c,d])=>{
-            let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
-            let timeStr = d.time || '无';
-            let dom = document.createElement('div');
-            dom.className='p-3 border-b border-gray-100';
-            dom.innerHTML=`
-                <div>兑换码：${c}</div>
+async function showRecord(){
+    let wrap = document.getElementById('recordBody');
+    let empty = document.getElementById('emptyTxt');
+    wrap.innerHTML='';
+    const {data:arr,error}=await supabase.from("codes").select("*");
+    if(error){alert(error.message);return;}
+    if(!arr.length){empty.classList.remove('hidden');return;}
+    empty.classList.add('hidden');
+    arr.forEach((d)=>{
+        let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
+        let timeStr = d.use_time || '无';
+        let dom = document.createElement('div');
+        dom.className='p-3 border-b border-gray-100';
+        dom.innerHTML=`
+                <div>兑换码：${d.code}</div>
                 <div>奖励：${d.reward}</div>
                 <div>状态：${status}</div>
                 <div>使用时间：${timeStr}</div>
                 <div>
-                    备注：<span id="rem_${c}">${d.remark||'暂无备注'}</span>
-                    <span class="edit-btn" onclick="editRemark('${c}')">编辑备注</span>
-                    <span class="delete-btn" onclick="deleteSingleCode('${c}')">删除</span>
+                    备注：<span id="rem_${d.code}">${d.remark||'暂无备注'}</span>
+                    <span class="edit-btn" onclick="editRemark('${d.code}')">编辑备注</span>
+                    <span class="delete-btn" onclick="deleteSingleCode('${d.code}')">删除</span>
                 </div>
             `;
-            wrap.appendChild(dom);
-        })
+        wrap.appendChild(dom);
+    })
+}
+
+async function deleteSingleCode(code){
+    if(!confirm('确定删除此兑换码？')) return;
+    const {error}=await supabase.from("codes").delete().eq("code",code);
+    if(error) alert("删除失败");
+    else showRecord();
+}
+
+async function deleteAllCodes(){
+    if(!confirm('确定清空所有兑换码？不可恢复！')) return;
+    const {error}=await supabase.from("codes").delete().neq("id",0);
+    if(error) alert("清空失败");
+    else showRecord();
+}
+
+async function editRemark(code){
+    const oldTextRes = await supabase.from("codes").select("remark").eq("code",code).single();
+    const oldText = oldTextRes.data?.remark || '';
+    let newRem = prompt('修改备注', oldText);
+    if(newRem !== null){
+        const {error}=await supabase.from("codes").update({remark:newRem}).eq("code",code);
+        if(error) alert("修改备注失败");
+        else showRecord();
     }
+}
 
-    function deleteSingleCode(code){
-        if(confirm('确定删除此兑换码？')){
-            delete data[code];
-            save();
-            showRecord();
-        }
+function openQr(c){
+    nowCode=c;
+    let m = document.getElementById('qrModal');
+    let q = document.getElementById('modalQr');
+    q.innerHTML='';
+    new QRCode(q,{text:location.origin+location.pathname+'?code='+c,width:160,height:160});
+    document.getElementById('modalCode').innerText=c;
+    m.classList.remove('hidden');
+}
+function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
+function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
+function copyNow(){copyTxt(nowCode);}
+
+function checkUrlCode(){
+    let u = new URLSearchParams(location.search).get('code');
+    if(u){
+        switchTab('redeem');
+        document.getElementById('redeemCode').value=u.toUpperCase();
     }
+}
 
-    function deleteAllCodes(){
-        if(confirm('确定清空所有兑换码？不可恢复！')){
-            data = {};
-            save();
-            showRecord();
-        }
-    }
-
-    function editRemark(code){
-        let oldText = data[code].remark || '';
-        let newRem = prompt('修改备注', oldText);
-        if(newRem !== null){
-            data[code].remark = newRem;
-            save();
-            showRecord();
-        }
-    }
-
-    function openQr(c){
-        nowCode=c;
-        let m = document.getElementById('qrModal');
-        let q = document.getElementById('modalQr');
-        q.innerHTML='';
-        new QRCode(q,{text:location.origin+location.pathname+'?code='+c,width:160,height:160});
-        document.getElementById('modalCode').innerText=c;
-        m.classList.remove('hidden');
-    }
-
-    function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
-    function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
-    function copyNow(){copyTxt(nowCode);}
-
-    function checkUrlCode(){
-        let u = new URLSearchParams(location.search).get('code');
-        if(u){
-            switchTab('redeem');
-            document.getElementById('redeemCode').value=u.toUpperCase();
-        }
-    }
-
-    // 免扫地人员
-    function showClean(){
-        let wrap = document.getElementById('cleanBody');
-        let empty = document.getElementById('cleanEmpty');
-        wrap.innerHTML='';
-        if(!cleanData.length){empty.classList.remove('hidden');return;}
-        empty.classList.add('hidden');
-        cleanData.forEach((name, index)=>{
-            let dom = document.createElement('div');
-            dom.className='p-3 border-b border-gray-100 flex justify-between items-center';
-            dom.innerHTML=`
+//免扫地人员
+async function showClean(){
+    let wrap = document.getElementById('cleanBody');
+    let empty = document.getElementById('cleanEmpty');
+    wrap.innerHTML='';
+    const list = await loadCleanPersons();
+    if(!list.length){empty.classList.remove('hidden');return;}
+    empty.classList.add('hidden');
+    list.forEach((name)=>{
+        let dom = document.createElement('div');
+        dom.className='p-3 border-b border-gray-100 flex justify-between items-center';
+        dom.innerHTML=`
                 <span>${name}</span>
-                <button onclick="deleteCleanPerson(${index})" class="delete-btn">删除</button>
+                <button onclick="deleteCleanPerson('${name}')" class="delete-btn">删除</button>
             `;
-            wrap.appendChild(dom);
-        })
-    }
+        wrap.appendChild(dom);
+    })
+}
 
-    function addCleanPerson(){
-        let name = document.getElementById('cleanName').value.trim();
-        if(!name) return alert('请输入姓名');
-        if(cleanData.includes(name)) return alert('已存在');
-        cleanData.push(name);
-        saveClean();
-        showClean();
+async function addCleanPerson(){
+    let name = document.getElementById('cleanName').value.trim();
+    if(!name) return alert('请输入姓名');
+    const {error}=await supabase.from("clean_person").insert({name:name});
+    if(error) alert("添加失败，名字已存在");
+    else {
         document.getElementById('cleanName').value='';
+        showClean();
     }
+}
 
-    function deleteCleanPerson(index){
-        if(confirm('确定删除？')){
-            cleanData.splice(index, 1);
-            saveClean();
-            showClean();
-        }
-    }
+async function deleteCleanPerson(name){
+    if(!confirm('确定删除？')) return;
+    const {error}=await supabase.from("clean_person").delete().eq("name",name);
+    if(error) alert("删除失败");
+    else showClean();
+}
 </script>
 </body>
 </html>
