@@ -214,6 +214,7 @@
         }
         .qr-row .code-text { color: #111; margin-top: 8px; }
         #gm-filter option { background: #1e293b; color: #f1f5f9; }
+        .scan-hint { color:#94a3b8; font-size:13px; text-align:center; padding:8px; }
     </style>
 </head>
 <body>
@@ -223,7 +224,7 @@
             <div class="text-center mb-8">
                 <div class="text-4xl mb-3">🔐</div>
                 <h2 class="text-2xl font-bold neon-title">云端管理系统</h2>
-                <p class="text-sm text-slate-400 mt-2">请输入访问密码验证身份</p>
+                <p class="text-sm text-slate-400 mt-2" id="login-subtitle">请输入访问密码验证身份</p>
             </div>
             <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密码">
             <button id="login-btn" class="tech-btn">
@@ -298,7 +299,7 @@
                     </div>
                 </div>
                 <div id="gen-tip" class="mb-4"></div>
-                <h4 class="font-semibold mb-2 text-sm text-slate-300">生成卡片（上方二维码，下方兑换码）</h4>
+                <h4 class="font-semibold mb-2 text-sm text-slate-300">生成卡片（扫码自动跳转核销页面）</h4>
                 <div id="card-list" class="card-grid"></div>
             </div>
         </div>
@@ -339,6 +340,7 @@
                 <div id="reader"></div>
                 <div id="scan-tip" class="mt-4"></div>
                 <button id="scan-stop-btn" class="tech-btn mt-4 hidden" style="background: linear-gradient(135deg,#334155,#475569)">停止摄像头</button>
+                <button id="scan-again-btn" class="tech-btn mt-4 hidden"><i class="fa fa-refresh"></i> 再次扫码</button>
             </div>
         </div>
     </div>
@@ -411,18 +413,61 @@
                     .toUpperCase();
             }
 
+            // ========== 本页基础地址 & 二维码内容 ==========
+            // 二维码里放的是「本页面网址 + ?code=兑换码」
+            // 微信/相机扫码 → 打开本页面 → 登录 → 自动进入核销页并填入兑换码
+            const PAGE_BASE = location.href.split("#")[0].split("?")[0];
+
+            function buildQrText(code) {
+                return PAGE_BASE + "?code=" + encodeURIComponent(code);
+            }
+
+            // 从扫码结果 / 粘贴内容中提取兑换码（兼容纯兑换码、URL、?code=xxx）
+            function extractCode(raw) {
+                let t = (raw || "").trim();
+                if (!t) return "";
+                // 形如 ?code=XXXX 或 &code=XXXX
+                const m = t.match(/[?&]code=([^&\s#]+)/i);
+                if (m) {
+                    try { return decodeURIComponent(m[1]).trim().toUpperCase(); }
+                    catch (e) { return m[1].trim().toUpperCase(); }
+                }
+                // 尝试按 URL 解析
+                try {
+                    const u = new URL(t);
+                    const c = u.searchParams.get("code");
+                    if (c) return c.trim().toUpperCase();
+                } catch (e) { /* 不是URL，忽略 */ }
+                return t.toUpperCase();
+            }
+
+            // 读取地址栏里的兑换码（扫码进入时）
+            let pendingCode = "";
+            try {
+                const sp = new URLSearchParams(location.search);
+                pendingCode = (sp.get("code") || "").trim().toUpperCase();
+            } catch (e) { pendingCode = ""; }
+
+            if (pendingCode) {
+                const sub = document.getElementById("login-subtitle");
+                if (sub) sub.textContent = "检测到核销链接，登录后自动填入兑换码";
+                const ri = document.getElementById("redeem-input");
+                if (ri) ri.value = pendingCode;
+            }
+
             // ========== 页面切换工具 ==========
             const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-scan","page-genmanage"];
             function showPage(pageId) {
                 allPages.forEach(p => document.getElementById(p).classList.add("hidden"));
                 document.getElementById(pageId).classList.remove("hidden");
-                
+
                 // 离开扫码页关闭摄像头
-                let scanScanner = window._scanScanner;
-                if(pageId !== "page-scan" && scanScanner) {
-                    scanScanner.stop().catch(()=>{});
-                    window._scanScanner = null;
-                    document.getElementById("scan-stop-btn").classList.add("hidden");
+                if (pageId !== "page-scan" && window._scanScanner) {
+                    stopScanner();
+                }
+                if (pageId !== "page-scan") {
+                    const again = document.getElementById("scan-again-btn");
+                    if (again) again.classList.add("hidden");
                 }
 
                 // 进入对应页面刷新数据
@@ -448,7 +493,17 @@
                     const hash = await sha256(pwd);
                     if(hash === CONFIG.AUTH_HASH) {
                         loginTip.classList.add("hidden");
-                        showPage("page-menu");
+                        pwdInput.value = "";
+                        // 带兑换码进入 → 直接进入核销页并自动填码
+                        if (pendingCode) {
+                            showPage("page-redeem");
+                            const ri = document.getElementById("redeem-input");
+                            ri.value = pendingCode;
+                            document.getElementById("redeem-tip").innerHTML =
+                                '<div class="tip-ok">已自动填入兑换密钥，点击「立即兑换」完成核销</div>';
+                        } else {
+                            showPage("page-menu");
+                        }
                         console.log("登录成功");
                     } else {
                         loginTip.classList.remove("hidden");
@@ -542,7 +597,7 @@
                 rewardInput.value = "";
                 cardList.innerHTML = "";
 
-                // 渲染二维码卡片
+                // 渲染二维码卡片（二维码内容 = 网址 + 兑换码）
                 newCodes.forEach(function(code) {
                     const card = document.createElement("div");
                     card.className = "code-card";
@@ -550,16 +605,17 @@
                     card.innerHTML = `
                         <div class="qrcode-wrap" id="${qrId}"></div>
                         <div class="code-text">${code}</div>
+                        <div style="font-size:11px;color:#666;margin-top:6px;">扫码 → 登录 → 自动核销</div>
                     `;
                     cardList.appendChild(card);
-                    new QRCode(document.getElementById(qrId), { text: code, width: 140, height: 140 });
+                    new QRCode(document.getElementById(qrId), { text: buildQrText(code), width: 140, height: 140 });
                 });
             });
 
             // ========== 通用兑换逻辑 ==========
             async function doRedeem(codeStr) {
                 if(!sb) return { ok: false, msg: "数据库未连接" };
-                const code = codeStr.trim().toUpperCase();
+                const code = extractCode(codeStr);
                 if (!code) return { ok: false, msg: "请输入兑换密钥" };
 
                 const { data, error } = await sb.from("codes").select("*").eq("code", code).single();
@@ -567,7 +623,8 @@
                 if (data.used) return { ok: false, msg: "⚠️ 该密钥已被使用" };
 
                 const now = new Date().toLocaleString();
-                await sb.from("codes").update({ used: true, use_time: now }).eq("id", data.id);
+                const { error: upErr } = await sb.from("codes").update({ used: true, use_time: now }).eq("id", data.id);
+                if (upErr) return { ok: false, msg: "❌ 核销失败：" + upErr.message };
                 return { ok: true, msg: `🎉 兑换成功！奖励：${data.reward}` };
             }
 
@@ -579,7 +636,19 @@
             redeemBtn.addEventListener("click", async function() {
                 const res = await doRedeem(redeemInput.value);
                 redeemTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
-                if(res.ok) redeemInput.value = "";
+                if(res.ok) {
+                    redeemInput.value = "";
+                    // 兑换完成后清掉地址栏里的 code，避免刷新重复核销
+                    if (pendingCode) {
+                        pendingCode = "";
+                        try { history.replaceState(null, "", PAGE_BASE); } catch(e) {}
+                    }
+                }
+            });
+
+            // 兑换页回车
+            redeemInput.addEventListener("keydown", function(e) {
+                if(e.key === "Enter") redeemBtn.click();
             });
 
             // ========== 兑换记录 ==========
@@ -639,7 +708,7 @@
                     row.innerHTML = `<span>${item.name}</span><span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>`;
                     nameList.appendChild(row);
                 });
-                document.querySelectorAll(".del-btn").forEach(function(btn) {
+                document.querySelectorAll("#name-list .del-btn").forEach(function(btn) {
                     btn.addEventListener("click", async function() {
                         await sb.from("clean").delete().eq("id", btn.dataset.id);
                         loadNameList();
@@ -663,45 +732,81 @@
                 loadNameList();
             });
 
-            // ========== 扫码兑换 ==========
+            // ========== 扫码兑换（一次只识别一个码） ==========
             const scanTip = document.getElementById("scan-tip");
             const scanStopBtn = document.getElementById("scan-stop-btn");
+            const scanAgainBtn = document.getElementById("scan-again-btn");
+
+            let scanHandled = false; // 本次扫码是否已处理过，防止连续识别
+
+            async function stopScanner() {
+                const s = window._scanScanner;
+                window._scanScanner = null;
+                if (s) {
+                    try { await s.stop(); } catch(e) {}
+                }
+                scanStopBtn.classList.add("hidden");
+            }
+
+            async function onScanSuccess(decodedText) {
+                // 一次扫码只处理一次
+                if (scanHandled) return;
+                scanHandled = true;
+
+                const code = extractCode(decodedText);
+                scanTip.innerHTML = '<div class="tip-ok">已识别，正在核销…</div>';
+
+                // 立刻停止摄像头，避免继续识别
+                await stopScanner();
+
+                const res = await doRedeem(code);
+                scanTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
+
+                // 显示「再次扫码」按钮，由用户决定是否再扫
+                scanAgainBtn.classList.remove("hidden");
+            }
 
             async function startScan() {
                 if(!window.Html5Qrcode) {
                     scanTip.innerHTML = '<div class="tip-err">扫码组件加载失败</div>';
                     return;
                 }
-                scanTip.innerHTML = "";
+                if (window._scanScanner) { await stopScanner(); }
+
+                scanHandled = false;
+                scanTip.innerHTML = '<div class="scan-hint">请将二维码放入取景框内，一次只识别一个</div>';
                 scanStopBtn.classList.remove("hidden");
-                
+                scanAgainBtn.classList.add("hidden");
+
+                const readerEl = document.getElementById("reader");
+                readerEl.innerHTML = "";
+
                 const scanner = new Html5Qrcode("reader");
                 window._scanScanner = scanner;
 
-                scanner.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: 250 },
-                    async function(decodedText) {
-                        const res = await doRedeem(decodedText);
-                        scanTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
-                        scanner.stop().then(function() {
-                            window._scanScanner = null;
-                            scanStopBtn.classList.add("hidden");
-                        });
-                    },
-                    function() {}
-                ).catch(function(err) {
+                try {
+                    await scanner.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: 250 },
+                        onScanSuccess,
+                        function() {}
+                    );
+                } catch(err) {
+                    window._scanScanner = null;
+                    scanStopBtn.classList.add("hidden");
                     scanTip.innerHTML = `<div class="tip-err">摄像头启动失败：${err}</div>`;
-                });
+                }
             }
 
-            scanStopBtn.addEventListener("click", function() {
-                if(window._scanScanner) {
-                    window._scanScanner.stop().then(function() {
-                        window._scanScanner = null;
-                        scanStopBtn.classList.add("hidden");
-                    });
-                }
+            scanStopBtn.addEventListener("click", async function() {
+                await stopScanner();
+                scanTip.innerHTML = '<div class="scan-hint">摄像头已停止</div>';
+                scanAgainBtn.classList.remove("hidden");
+            });
+
+            // 再次扫码
+            scanAgainBtn.addEventListener("click", function() {
+                startScan();
             });
 
             // ========== 生成信息管理 ==========
@@ -790,7 +895,7 @@
                 });
             }
 
-            // 展开 / 收起二维码
+            // 展开 / 收起二维码（内容为网址+兑换码）
             function toggleQr(row, item) {
                 const next = row.nextElementSibling;
                 if(next && next.classList.contains("qr-row")) {
@@ -806,8 +911,12 @@
                 label.className = "code-text";
                 label.textContent = item.code;
                 box.appendChild(label);
+                const hint = document.createElement("div");
+                hint.style.cssText = "font-size:11px;color:#666;margin-top:6px;";
+                hint.textContent = "扫码 → 登录 → 自动核销";
+                box.appendChild(hint);
                 row.insertAdjacentElement("afterend", box);
-                new QRCode(holder, { text: item.code, width: 140, height: 140 });
+                new QRCode(holder, { text: buildQrText(item.code), width: 140, height: 140 });
             }
 
             // 复制文本（兼容非 HTTPS 环境）
@@ -878,9 +987,9 @@
                     showGmTip("❌ 暂无数据可导出", false);
                     return;
                 }
-                const rows = [["兑换码", "奖励内容", "状态", "使用时间"]];
+                const rows = [["兑换码", "奖励内容", "状态", "使用时间", "核销链接"]];
                 gmAllData.forEach(function(it) {
-                    rows.push([it.code || "", it.reward || "", it.used ? "已使用" : "未使用", it.use_time || ""]);
+                    rows.push([it.code || "", it.reward || "", it.used ? "已使用" : "未使用", it.use_time || "", buildQrText(it.code || "")]);
                 });
                 const csv = "\uFEFF" + rows.map(function(r) {
                     return r.map(function(c) {
