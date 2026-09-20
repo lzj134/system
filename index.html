@@ -210,7 +210,7 @@
  <script>
 /*** ====================== 配置常量层（Supabase配置） ======================*/
 const CONFIG = {
-    AUTH_PASSWORD_HASH: "33b6524013435235366F7720120416392405107921366012001371352140174",
+    AUTH_PASSWORD_HASH: "6f3c592d6bf1807eea940d4df92bfe4180b1a77f4304b59f365839114d9a89ee",
     SUPABASE_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
     SUPABASE_ANON_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux",
     CODE_CHAR_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
@@ -219,9 +219,7 @@ const CONFIG = {
 // 初始化Supabase客户端
 const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
-/**
- * SHA256哈希函数（密码哈希校验）
- */
+/*** SHA256哈希函数（密码哈希校验）*/
 async function sha256(text){
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
