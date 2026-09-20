@@ -221,7 +221,12 @@
             CODE_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
             CODE_LEN: 12
         };
-        const sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
+       let sb;
+if(window.supabase){
+    sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
+}else{
+    alert("数据库库加载失败，请按Ctrl+F5强制刷新页面！");
+}
         let html5QrCode = null;
 
         async function sha256(text) {
