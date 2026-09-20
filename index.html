@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>免扫地卡管理系统</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>免扫地卡管理系统 · Supabase云端版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -16,385 +18,596 @@
             min-height: 100vh;
             background: linear-gradient(135deg, #0066ff 0%, #3399ff 100%);
             background-attachment: fixed;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        #auth-screen {
+        /* 登录遮罩 */
+        .auth-wrapper {
             position: fixed;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            background: transparent;
-            color: white;
-            padding: 20px;
+            z-index: 99;
+            padding: 1rem;
         }
-        #main-content {
-            display: none;
-            padding: 20px;
-        }
-        .glass-card {
-            background: rgba(255,255,255,0.95);
-            border-radius: 20px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-            padding: 24px;
+        /* 玻璃卡片 */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+            padding: 1.5rem;
             width: 100%;
-            max-width: 400px;
         }
-        .tab-btn {
-            padding: 10px 20px;
-            border-radius: 999px;
+        .tab-nav-item {
+            padding: 0.625rem 1.25rem;
+            border-radius: 9999px;
             border: none;
             background: rgba(255,255,255,0.15);
             color: rgba(255,255,255,0.85);
             cursor: pointer;
+            transition: 0.2s;
         }
-        .tab-btn.active {
-            background: white;
+        .tab-nav-item.active {
+            background: #ffffff;
             color: #0066ff;
             box-shadow: 0 4px 12px rgba(0,102,255,0.2);
         }
         .btn-primary {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-weight: 600;
+            color: white;
             background: linear-gradient(135deg, #0066ff, #3399ff);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-weight: bold;
-            width: 100%;
             cursor: pointer;
+            transition: opacity .2s;
         }
+        .btn-primary:hover {opacity:0.92;}
         .btn-danger {
-            background: linear-gradient(135deg, #ff4444, #ff6666);
-            color: white;
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
             border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-weight: bold;
-            width: 100%;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, #ff4444, #ff6666);
             cursor: pointer;
+            transition: opacity .2s;
         }
-        .input-field {
+        .btn-danger:hover {opacity:0.92;}
+        .input-normal {
             width: 100%;
-            padding: 14px;
+            padding: 0.875rem 1rem;
             border: 2px solid #cce0ff;
-            border-radius: 12px;
-            text-align: center;
+            border-radius: 0.75rem;
             outline: none;
-            background: #fff;
-            z-index: 1;
+            text-align: center;
+            transition: border-color 0.2s;
         }
-        .input-field:focus {
+        .input-normal:focus {
             border-color: #0066ff;
         }
-        .edit-btn {
-            color: #0066ff;
-            font-size: 14px;
-            cursor: pointer;
-            margin-left: 8px;
+        .text-btn-edit {
+            color:#0066ff;
+            font-size:0.875rem;
+            cursor:pointer;
+            margin-left:0.5rem;
         }
-        .delete-btn {
-            color: #ff4444;
-            font-size: 14px;
-            cursor: pointer;
-            margin-left: 8px;
+        .text-btn-del {
+            color:#ff4444;
+            font-size:0.875rem;
+            cursor:pointer;
+            margin-left:0.5rem;
+        }
+        /* 弹窗遮罩 */
+        .modal-overlay {
+            position: fixed;
+            inset:0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:1rem;
+        }
+        .hide {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-
-<div id="auth-screen">
-    <div class="glass-card text-center">
-        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
-        <h2 class="text-xl font-bold text-gray-800 mt-4 mb-2">访问验证</h2>
-        <p class="text-gray-500 text-sm mb-6">请输入密钥进入系统</p>
-        <p class="text-gray-500 text-sm mb-6">需要兑换请联系管理员，班长或卫生委员廖志强</p >
-        <input type="password" id="secret-input" placeholder="输入密钥" class="input-field mb-4">
-        <button onclick="checkSecret()" class="btn-primary">进入系统</button>
-        <div id="errTip" class="text-red-500 text-sm mt-3 hidden">密钥错误，请重试</div>
-    </div>
-</div>
-
-<div id="main-content" class="max-w-5xl mx-auto">
-    <div class="text-center text-white mt-6 mb-8">
-        <div class="text-5xl mb-2">( ˶ ❛ ꁞ ❛ ˶ )</div>
-        <h1 class="text-3xl font-bold">免扫地卡管理系统</h1>
-        <p class="opacity-80 mt-2">生成 · 兑换 · 记录管理</p>
-    </div>
-
-    <div class="flex justify-center mb-8">
-        <div class="bg-white/15 rounded-full p-1 flex gap-1">
-            <button onclick="switchTab('redeem')" class="tab-btn active" data-tab="redeem">兑换码兑换</button>
-            <button onclick="switchTab('generate')" class="tab-btn" data-tab="generate">生成兑换码</button>
-            <button onclick="switchTab('records')" class="tab-btn" data-tab="records">兑换记录</button>
-            <button onclick="switchTab('clean')" class="tab-btn" data-tab="clean">免扫地人员表</button>
+    <!-- 登录验证界面 -->
+    <div id="authScreen" class="auth-wrapper">
+        <div class="glass max-w-md text-center">
+            <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
+            <h2 class="mt-4 mb-2 text-xl font-bold text-gray-800">访问验证</h2>
+            <p class="text-sm text-gray-500 mb-2">请输入密钥进入系统</p>
+            <p class="text-sm text-gray-500 mb-6">需要兑换请联系管理员，班长或卫生委员廖志强</p>
+            <input id="secretPwd" type="password" placeholder="输入密钥" class="input-normal mb-4">
+            <button id="authSubmit" class="btn-primary">进入系统</button>
+            <div id="authErrorTip" class="mt-3 text-sm text-red-500 hide">密钥错误，请重试</div>
         </div>
     </div>
 
-    <div id="tab-redeem" class="glass-card p-6 max-w-md mx-auto">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
-            <h2 class="text-xl font-bold text-gray-800 mt-3">输入兑换码</h2>
+    <!-- 主业务界面 -->
+    <div id="mainApp" class="max-w-5xl mx-auto px-4 py-8 hide">
+        <div class="text-center text-white mb-8">
+            <div class="text-5xl mb-2">( ˶ ❛ ꁞ ❛ ˶ )</div>
+            <h1 class="text-3xl font-bold">免扫地卡管理系统</h1>
+            <p class="mt-2 opacity-80">生成 · 兑换 · 记录管理（云端Supabase）</p>
         </div>
-        <input type="text" id="redeemCode" placeholder="XXXX-XXXX-XXXX" maxlength="14" class="input-field mb-4 uppercase">
-        <button onclick="doRedeem()" class="btn-primary">立即兑换</button>
-        <div id="resTip" class="mt-4 text-center hidden rounded-lg py-2"></div>
+
+        <!-- Tab导航 -->
+        <div class="flex justify-center mb-8">
+            <div class="bg-white/15 rounded-full p-1 flex gap-1 flex-wrap justify-center">
+                <button data-tab-key="redeem" class="tab-nav-item active">兑换码兑换</button>
+                <button data-tab-key="generate" class="tab-nav-item">生成兑换码</button>
+                <button data-tab-key="records" class="tab-nav-item">兑换记录</button>
+                <button data-tab-key="cleanList" class="tab-nav-item">免扫地人员表</button>
+            </div>
+        </div>
+
+        <!-- Tab面板：兑换 -->
+        <div data-tab-panel="redeem" class="glass max-w-md mx-auto">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🎫</div>
+                <h2 class="mt-3 text-xl font-bold text-gray-800">输入兑换码</h2>
+            </div>
+            <input id="inputRedeemCode" maxlength="14" placeholder="XXXX-XXXX-XXXX" class="input-normal mb-4" />
+            <button id="btnDoRedeem" class="btn-primary">立即兑换</button>
+            <div id="redeemResultTip" class="mt-4 text-center rounded-lg py-2 hide"></div>
+        </div>
+
+        <!-- Tab面板：生成兑换码 -->
+        <div data-tab-panel="generate" class="glass max-w-3xl mx-auto hide">
+            <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
+            <div class="space-y-4">
+                <input id="inputRewardText" placeholder="奖励内容" class="input-normal"/>
+                <input id="inputGenCount" type="number" min="1" max="20" value="1" class="input-normal"/>
+                <button id="btnCreateCode" class="btn-primary">一键生成</button>
+            </div>
+            <div class="mt-4 bg-gray-50 rounded-lg p-4 min-h-[280px]">
+                <div id="qrRenderGrid" class="grid grid-cols-2 gap-4"></div>
+            </div>
+            <div id="codeOutputList" class="mt-4"></div>
+        </div>
+
+        <!-- Tab面板：兑换记录 -->
+        <div data-tab-panel="records" class="glass max-w-4xl mx-auto hide">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
+            <div class="mb-4">
+                <button id="btnClearAllCode" class="btn-danger">清空所有兑换码</button>
+            </div>
+            <div id="recordRenderBody" class="text-sm"></div>
+            <div id="recordEmptyText" class="py-8 text-center text-gray-400 hide">暂无数据</div>
+        </div>
+
+        <!-- Tab面板：免扫地人员 -->
+        <div data-tab-panel="cleanList" class="glass max-w-4xl mx-auto hide">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">免扫地人员管理表</h2>
+            <div class="space-y-4 mb-6">
+                <input id="inputCleanName" placeholder="输入人员姓名" class="input-normal"/>
+                <button id="btnAddCleanPerson" class="btn-primary">添加免扫地人员</button>
+            </div>
+            <div id="cleanRenderBody" class="text-sm"></div>
+            <div id="cleanEmptyText" class="py-8 text-center text-gray-400 hide">暂无人员安排</div>
+        </div>
     </div>
 
-    <div id="tab-generate" class="glass-card p-6 max-w-3xl mx-auto hidden">
-        <h2 class="text-xl font-bold text-gray-800 text-center mb-6">生成新兑换码</h2>
-        <div class="space-y-4">
-            <input type="text" id="rewardTxt" placeholder="奖励内容" class="input-field">
-            <input type="number" id="genNum" value="1" min="1" max="20" class="input-field">
-            <button onclick="createCode()" class="btn-primary">一键生成</button>
-        </div>
-        <div id="qrBox" class="bg-gray-50 rounded-lg p-4 min-h-[280px] mt-4">
-            <div class="grid grid-cols-2 gap-4" id="qrGrid"></div>
-        </div>
-        <div id="codeList" class="mt-4"></div>
-    </div>
-
-    <div id="tab-records" class="glass-card p-6 max-w-4xl mx-auto hidden">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">兑换记录</h2>
-        <div class="mb-4">
-            <button onclick="deleteAllCodes()" class="btn-danger">清空所有兑换码</button>
-        </div>
-        <div id="recordBody" class="text-sm"></div>
-        <div id="emptyTxt" class="text-center text-gray-400 py-8">暂无数据</div>
-    </div>
-
-    <div id="tab-clean" class="glass-card p-6 max-w-4xl mx-auto hidden">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">免扫地人员管理表</h2>
-        <div class="space-y-4 mb-6">
-            <input type="text" id="cleanName" placeholder="输入人员姓名" class="input-field">
-            <button onclick="addCleanPerson()" class="btn-primary">添加免扫地人员</button>
-        </div>
-        <div id="cleanBody" class="text-sm"></div>
-        <div id="cleanEmpty" class="text-center text-gray-400 py-8">暂无人员安排</div>
-    </div>
-</div>
-
-<div id="qrModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
-        <div id="modalQr"></div>
-        <p id="modalCode" class="font-mono text-blue-600 my-3"></p>
-        <div class="flex gap-2">
-            <button onclick="copyNow()" class="flex-1 bg-blue-500 text-white py-2 rounded-lg">复制</button>
-            <button onclick="closeModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">关闭</button>
+    <!-- 二维码弹窗 -->
+    <div id="qrModal" class="modal-overlay hide">
+        <div class="bg-white rounded-xl p-5 w-full max-w-sm text-center">
+            <div id="modalQrDom"></div>
+            <p id="modalShowCode" class="my-3 font-mono text-blue-600"></p>
+            <div class="flex gap-2">
+                <button id="modalCopyBtn" class="flex-1 py-2 rounded-lg bg-blue-500 text-white">复制</button>
+                <button id="modalCloseBtn" class="flex-1 py-2 rounded-lg bg-gray-200">关闭</button>
+            </div>
         </div>
     </div>
-</div>
 
 <script>
-    let data = JSON.parse(localStorage.getItem('codeData')) || {};
-    let cleanData = JSON.parse(localStorage.getItem('cleanData')) || [];
-    let nowCode = "";
-    const pwd = "2414777";
+/**
+ * ====================== 配置常量层（Supabase配置已填好） ======================
+ */
+const CONFIG = {
+    AUTH_PASSWORD_HASH: "33b6524013435235366F7720120416392405107921366012001371352140174",
+    SUPABASE_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
+    SUPABASE_ANON_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux",
+    CODE_CHAR_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+    CODE_RAW_LEN:12
+};
+// 初始化Supabase客户端
+const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
-    function save(){
-        localStorage.setItem('codeData',JSON.stringify(data));
-    }
-    function saveClean(){
-        localStorage.setItem('cleanData',JSON.stringify(cleanData));
-    }
+/**
+ * SHA256哈希函数（密码哈希校验）
+ */
+async function sha256(text){
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
-    function checkSecret(){
-        let v = document.getElementById('secret-input').value.trim();
-        if(v === pwd){
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            checkUrlCode();
+/**
+ * ====================== Supabase云端存储层 ======================
+ */
+const CloudDB = {
+    // 获取全部兑换码
+    async getCodes(){
+        const {data,error} = await supabase.from("codes").select("*");
+        if(error){
+            console.error("读取兑换码失败",error);
+            return [];
+        }
+        return data;
+    },
+    // 批量插入兑换码
+    async insertCodes(list){
+        const {error} = await supabase.from("codes").insert(list);
+        if(error) throw error;
+    },
+    // 更新兑换码状态（标记已兑换+记录时间）
+    async updateCodeUsed(codeStr, timeStr){
+        const {error} = await supabase.from("codes").update({used:true, use_time:timeStr}).eq("code",codeStr);
+        if(error) throw error;
+    },
+    // 修改备注
+    async updateRemark(codeStr, remarkText){
+        const {error} = await supabase.from("codes").update({remark:remarkText}).eq("code",codeStr);
+        if(error) throw error;
+    },
+    // 删除单条兑换码
+    async deleteCode(codeStr){
+        const {error} = await supabase.from("codes").delete().eq("code",codeStr);
+        if(error) throw error;
+    },
+    // 清空全部兑换码
+    async deleteAllCodes(){
+        const {error} = await supabase.from("codes").delete().neq("id",0);
+        if(error) throw error;
+    },
+
+    // 免扫人员相关
+    async getCleanList(){
+        const {data,error} = await supabase.from("clean").select("*");
+        if(error){
+            console.error("读取人员失败",error);
+            return [];
+        }
+        return data;
+    },
+    async addCleanName(name){
+        const {error} = await supabase.from("clean").insert([{name}]);
+        if(error) throw error;
+    },
+    async deleteCleanById(id){
+        const {error} = await supabase.from("clean").delete().eq("id",id);
+        if(error) throw error;
+    }
+};
+
+/**
+ * ====================== 业务模型层 ======================
+ */
+const CodeService = {
+    generateOneCode(){
+        let res = "";
+        const pool = CONFIG.CODE_CHAR_POOL;
+        for(let i=0; i<CONFIG.CODE_RAW_LEN; i++){
+            if(i>0 && i%4 === 0){
+                res += "-";
+            }
+            const randIdx = Math.floor(Math.random() * pool.length);
+            res += pool[randIdx];
+        }
+        return res;
+    },
+    async batchCreate(count, rewardText){
+        const allCodes = await CloudDB.getCodes();
+        const createdList = [];
+        const insertArr = [];
+        for(let i=0; i<count; i++){
+            let newCode;
+            do{
+                newCode = this.generateOneCode();
+            }while(allCodes.find(x=>x.code === newCode));
+            insertArr.push({
+                code: newCode,
+                reward: rewardText,
+                used: false,
+                use_time: "",
+                remark: ""
+            });
+            createdList.push(newCode);
+        }
+        await CloudDB.insertCodes(insertArr);
+        return {createdList};
+    },
+    async doRedeem(inputRaw){
+        const pure = inputRaw.replace(/-/g,"").toUpperCase();
+        if(pure.length !== CONFIG.CODE_RAW_LEN){
+            return {ok:false, msg:"格式错误"};
+        }
+        const standardCode = `${pure.slice(0,4)}-${pure.slice(4,8)}-${pure.slice(8,12)}`;
+        const allCodes = await CloudDB.getCodes();
+        const findItem = allCodes.find(x=>x.code === standardCode);
+        if(!findItem) return {ok:false, msg:"无效兑换码"};
+        if(findItem.used) return {ok:false, msg:"已使用"};
+        const nowTime = new Date().toLocaleString();
+        await CloudDB.updateCodeUsed(standardCode, nowTime);
+        return {ok:true, msg:"兑换成功 🎉", code:standardCode};
+    }
+};
+
+const CleanPersonService = {
+    async addPerson(name){
+        const trimName = name.trim();
+        if(!trimName) return {ok:false, msg:"请输入姓名"};
+        const list = await CloudDB.getCleanList();
+        if(list.find(x=>x.name === trimName)) return {ok:false, msg:"该人员已存在"};
+        await CloudDB.addCleanName(trimName);
+        return {ok:true};
+    },
+    async deletePerson(id){
+        await CloudDB.deleteCleanById(id);
+        return true;
+    }
+};
+
+/**
+ * ====================== UI视图控制层 ======================
+ */
+const UiController = {
+    currentModalCode:"",
+    initTab(){
+        const tabBtns = document.querySelectorAll(".tab-nav-item");
+        tabBtns.forEach(btn=>{
+            btn.addEventListener("click", async ()=>{
+                const key = btn.dataset.tabKey;
+                await this.switchTab(key);
+            })
+        })
+    },
+    async switchTab(tabKey){
+        document.querySelectorAll(".tab-nav-item").forEach(b=>b.classList.remove("active"));
+        document.querySelector(`[data-tab-key="${tabKey}"]`).classList.add("active");
+        document.querySelectorAll("[data-tab-panel]").forEach(panel=>panel.classList.add("hide"));
+        document.querySelector(`[data-tab-panel="${tabKey}"]`).classList.remove("hide");
+
+        if(tabKey === "records") await this.renderRecordList();
+        if(tabKey === "cleanList") await this.renderCleanPersonList();
+    },
+    showTip(elId, text, isSuccess){
+        const el = document.getElementById(elId);
+        el.classList.remove("hide", "bg-green-100", "text-green-700", "bg-red-100", "text-red-700");
+        if(isSuccess){
+            el.classList.add("bg-green-100", "text-green-700");
         }else{
-            document.getElementById('errTip').classList.remove('hidden');
+            el.classList.add("bg-red-100", "text-red-700");
         }
-    }
-
-    function switchTab(n){
-        document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-'+n).classList.remove('hidden');
-        document.querySelector(`.tab-btn[data-tab="${n}"]`).classList.add('active');
-        if(n==='records') showRecord();
-        if(n==='clean') showClean();
-    }
-
-    function randomCode(){
-        let s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';
-        for(let i=0;i<12;i++){
-            if(i&&i%4===0) r+='-';
-            r+=s[Math.floor(Math.random()*s.length)];
+        el.innerText = text;
+        el.classList.remove("hide");
+        setTimeout(()=>{ el.classList.add("hide"); }, 3000);
+    },
+    async renderRecordList(){
+        const codeData = await CloudDB.getCodes();
+        const wrap = document.getElementById("recordRenderBody");
+        const emptyTip = document.getElementById("recordEmptyText");
+        wrap.innerHTML = "";
+        if(codeData.length === 0){
+            emptyTip.classList.remove("hide");
+            return;
         }
-        return r;
-    }
-
-    function createCode(){
-        let w = document.getElementById('rewardTxt').value.trim();
-        let n = +document.getElementById('genNum').value;
-        if(!w) return alert('填写奖励内容');
-        let qrGrid = document.getElementById('qrGrid');
-        let listWrap = document.getElementById('codeList');
-        qrGrid.innerHTML='';
-        listWrap.innerHTML='';
-        for(let i=0;i<n;i++){
-            let c;
-            do c=randomCode();while(data[c]);
-            data[c]={reward:w,used:false,time:'',remark:''};
-            save();
-            let qrItem = document.createElement('div');
-            qrItem.className='text-center';
-            let d = document.createElement('div');
-            new QRCode(d,{text:location.origin+location.pathname+'?code='+c,width:100,height:100});
-            qrItem.appendChild(d);
-            let txt=document.createElement('div');
-            txt.className='mt-1 text-sm font-mono text-blue-600';
-            txt.textContent=c;
-            qrItem.appendChild(txt);
-            qrItem.onclick=()=>openQr(c);
-            qrGrid.appendChild(qrItem);
-            let item = document.createElement('div');
-            item.className='p-2 bg-gray-50 rounded flex justify-between mt-1';
-            item.innerHTML = `<span class="font-mono text-sm">${c}</span><button onclick="copyTxt('${c}')" class="text-blue-500">复制</button>`;
-            listWrap.appendChild(item);
-        }
-        alert('生成完成');
-    }
-
-    function doRedeem(){
-        let input = document.getElementById('redeemCode').value.toUpperCase().replace(/-/g,'');
-        if(input.length!==12) return tip('格式错误','red');
-        let code = input.replace(/(\w{4})(\w{4})(\w{4})/,'$1-$2-$3');
-        if(!data[code]) return tip('无效兑换码','red');
-        if(data[code].used) return tip('已使用','red');
-        data[code].used=true;
-        data[code].time=new Date().toLocaleString();
-        save();
-        tip('兑换成功 🎉','green');
-        document.getElementById('redeemCode').value='';
-    }
-
-    function tip(txt,color){
-        let el = document.getElementById('resTip');
-        el.classList.remove('hidden','bg-green-100','text-green-700','bg-red-100','text-red-700');
-        if(color==='green'){
-            el.className='mt-4 text-center rounded-lg py-2 bg-green-100 text-green-700';
-        }else{
-            el.className='mt-4 text-center rounded-lg py-2 bg-red-100 text-red-700';
-        }
-        el.innerText=txt;
-        el.classList.remove('hidden');
-        setTimeout(()=>el.classList.add('hidden'),3000);
-    }
-
-    function showRecord(){
-        let wrap = document.getElementById('recordBody');
-        let empty = document.getElementById('emptyTxt');
-        wrap.innerHTML='';
-        let arr = Object.entries(data);
-        if(!arr.length){empty.classList.remove('hidden');return;}
-        empty.classList.add('hidden');
-        arr.forEach(([c,d])=>{
-            let status = d.used ? '<span class="text-red-600">已使用</span>' : '<span class="text-green-600">未使用</span>';
-            let timeStr = d.time || '无';
-            let dom = document.createElement('div');
-            dom.className='p-3 border-b border-gray-100';
-            dom.innerHTML=`
-                <div>兑换码：${c}</div>
-                <div>奖励：${d.reward}</div>
-                <div>状态：${status}</div>
+        emptyTip.classList.add("hide");
+        codeData.forEach(item=>{
+            const statusHtml = item.used ? `<span class="text-red-600">已使用</span>` : `<span class="text-green-600">未使用</span>`;
+            const timeStr = item.use_time || "无";
+            const remarkStr = item.remark || "暂无备注";
+            const div = document.createElement("div");
+            div.className = "p-3 border-b border-gray-100";
+            div.innerHTML = `
+                <div>兑换码：${item.code}</div>
+                <div>奖励：${item.reward}</div>
+                <div>状态：${statusHtml}</div>
                 <div>使用时间：${timeStr}</div>
-                <div>
-                    备注：<span id="rem_${c}">${d.remark||'暂无备注'}</span>
-                    <span class="edit-btn" onclick="editRemark('${c}')">编辑备注</span>
-                    <span class="delete-btn" onclick="deleteSingleCode('${c}')">删除</span>
+                <div>备注：${remarkStr}
+                    <span class="text-btn-edit" data-edit-code="${item.code}">编辑备注</span>
+                    <span class="text-btn-del" data-del-code="${item.code}">删除</span>
                 </div>
             `;
-            wrap.appendChild(dom);
+            wrap.appendChild(div);
         })
-    }
-
-    function deleteSingleCode(code){
-        if(confirm('确定删除此兑换码？')){
-            delete data[code];
-            save();
-            showRecord();
-        }
-    }
-
-    function deleteAllCodes(){
-        if(confirm('确定清空所有兑换码？不可恢复！')){
-            data = {};
-            save();
-            showRecord();
-        }
-    }
-
-    function editRemark(code){
-        let oldText = data[code].remark || '';
-        let newRem = prompt('修改备注', oldText);
-        if(newRem !== null){
-            data[code].remark = newRem;
-            save();
-            showRecord();
-        }
-    }
-
-    function openQr(c){
-        nowCode=c;
-        let m = document.getElementById('qrModal');
-        let q = document.getElementById('modalQr');
-        q.innerHTML='';
-        new QRCode(q,{text:location.origin+location.pathname+'?code='+c,width:160,height:160});
-        document.getElementById('modalCode').innerText=c;
-        m.classList.remove('hidden');
-    }
-
-    function closeModal(){document.getElementById('qrModal').classList.add('hidden');}
-    function copyTxt(c){navigator.clipboard.writeText(c).then(()=>alert('已复制'));}
-    function copyNow(){copyTxt(nowCode);}
-
-    function checkUrlCode(){
-        let u = new URLSearchParams(location.search).get('code');
-        if(u){
-            switchTab('redeem');
-            document.getElementById('redeemCode').value=u.toUpperCase();
-        }
-    }
-
-    // 免扫地人员
-    function showClean(){
-        let wrap = document.getElementById('cleanBody');
-        let empty = document.getElementById('cleanEmpty');
-        wrap.innerHTML='';
-        if(!cleanData.length){empty.classList.remove('hidden');return;}
-        empty.classList.add('hidden');
-        cleanData.forEach((name, index)=>{
-            let dom = document.createElement('div');
-            dom.className='p-3 border-b border-gray-100 flex justify-between items-center';
-            dom.innerHTML=`
-                <span>${name}</span>
-                <button onclick="deleteCleanPerson(${index})" class="delete-btn">删除</button>
-            `;
-            wrap.appendChild(dom);
+        document.querySelectorAll("[data-edit-code]").forEach(dom=>{
+            dom.onclick = async ()=>{
+                const c = dom.dataset.editCode;
+                const oldVal = codeData.find(x=>x.code===c).remark || "";
+                const inputVal = prompt("修改备注", oldVal);
+                if(inputVal === null) return;
+                await CloudDB.updateRemark(c, inputVal);
+                await this.renderRecordList();
+            }
         })
-    }
+        document.querySelectorAll("[data-del-code]").forEach(dom=>{
+            dom.onclick = async ()=>{
+                const c = dom.dataset.delCode;
+                if(!confirm("确定删除此兑换码？")) return;
+                await CloudDB.deleteCode(c);
+                await this.renderRecordList();
+            }
+        })
+    },
+    async renderCleanPersonList(){
+        const list = await CloudDB.getCleanList();
+        const wrap = document.getElementById("cleanRenderBody");
+        const emptyTip = document.getElementById("cleanEmptyText");
+        wrap.innerHTML = "";
+        if(list.length === 0){
+            emptyTip.classList.remove("hide");
+            return;
+        }
+        emptyTip.classList.add("hide");
+        list.forEach((row)=>{
+            const div = document.createElement("div");
+            div.className = "p-3 border-b border-gray-100 flex justify-between items-center";
+            div.innerHTML = `<span>${row.name}</span><span class="text-btn-del" data-clean-id="${row.id}">删除</span>`;
+            wrap.appendChild(div);
+        })
+        document.querySelectorAll("[data-clean-id]").forEach(dom=>{
+            dom.onclick = async ()=>{
+                const id = Number(dom.dataset.cleanId);
+                if(confirm("确定删除该人员？")){
+                    await CleanPersonService.deletePerson(id);
+                    await this.renderCleanPersonList();
+                }
+            }
+        })
+    },
+    openQrModal(codeStr){
+        this.currentModalCode = codeStr;
+        const modal = document.getElementById("qrModal");
+        const qrDom = document.getElementById("modalQrDom");
+        qrDom.innerHTML = "";
+        const qrUrl = location.origin + location.pathname + "?code=" + codeStr;
+        new QRCode(qrDom, {text: qrUrl, width:160, height:160});
+        document.getElementById("modalShowCode").innerText = codeStr;
+        modal.classList.remove("hide");
+    },
+    closeQrModal(){
+        document.getElementById("qrModal").classList.add("hide");
+    },
+    async copyTextToClipboard(text){
+        try{
+            await navigator.clipboard.writeText(text);
+            alert("复制成功");
+        }catch(err){
+            alert("复制失败，请手动复制");
+        }
+    },
+    async renderGenerateResult(createdCodeList){
+        const gridWrap = document.getElementById("qrRenderGrid");
+        const listWrap = document.getElementById("codeOutputList");
+        gridWrap.innerHTML = "";
+        listWrap.innerHTML = "";
+        createdCodeList.forEach(code=>{
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "text-center";
+            const qrBox = document.createElement("div");
+            const qrUrl = location.origin + location.pathname + "?code=" + code;
+            new QRCode(qrBox, {text: qrUrl, width:100, height:100});
+            itemDiv.appendChild(qrBox);
+            const codeTextDiv = document.createElement("div");
+            codeTextDiv.className = "mt-1 text-sm font-mono text-blue-600";
+            codeTextDiv.innerText = code;
+            itemDiv.appendChild(codeTextDiv);
+            itemDiv.style.cursor = "pointer";
+            itemDiv.onclick = ()=>this.openQrModal(code);
+            gridWrap.appendChild(itemDiv);
 
-    function addCleanPerson(){
-        let name = document.getElementById('cleanName').value.trim();
-        if(!name) return alert('请输入姓名');
-        if(cleanData.includes(name)) return alert('已存在');
-        cleanData.push(name);
-        saveClean();
-        showClean();
-        document.getElementById('cleanName').value='';
-    }
-
-    function deleteCleanPerson(index){
-        if(confirm('确定删除？')){
-            cleanData.splice(index, 1);
-            saveClean();
-            showClean();
+            const lineDiv = document.createElement("div");
+            lineDiv.className = "p-2 bg-gray-50 rounded flex justify-between mt-1";
+            lineDiv.innerHTML = `<span class="font-mono text-sm">${code}</span>`;
+            const copyBtn = document.createElement("button");
+            copyBtn.className = "text-blue-500";
+            copyBtn.innerText = "复制";
+            copyBtn.onclick = ()=>this.copyTextToClipboard(code);
+            lineDiv.appendChild(copyBtn);
+            listWrap.appendChild(lineDiv);
+        })
+    },
+    parseUrlCodeParam(){
+        const params = new URLSearchParams(location.search);
+        const codeFromUrl = params.get("code");
+        if(codeFromUrl){
+            this.switchTab("redeem");
+            document.getElementById("inputRedeemCode").value = codeFromUrl.toUpperCase();
         }
     }
+};
+
+/**
+ * ====================== 入口初始化与事件绑定 ======================
+ */
+async function bootstrap(){
+    UiController.initTab();
+
+    // 登录按钮
+    document.getElementById("authSubmit").addEventListener("click", async ()=>{
+        const inputPwd = document.getElementById("secretPwd").value.trim();
+        const errTip = document.getElementById("authErrorTip");
+        const inputHash = await sha256(inputPwd);
+        if(inputHash === CONFIG.AUTH_PASSWORD_HASH){
+            document.getElementById("authScreen").classList.add("hide");
+            document.getElementById("mainApp").classList.remove("hide");
+            UiController.parseUrlCodeParam();
+        }else{
+            errTip.classList.remove("hide");
+        }
+    })
+
+    // 登录框回车
+    document.getElementById("secretPwd").addEventListener("keydown", async e=>{
+        if(e.key === "Enter") document.getElementById("authSubmit").click();
+    })
+
+    // 兑换按钮
+    document.getElementById("btnDoRedeem").addEventListener("click", async ()=>{
+        const inputVal = document.getElementById("inputRedeemCode").value;
+        const res = await CodeService.doRedeem(inputVal);
+        if(res.ok){
+            UiController.showTip("redeemResultTip", res.msg, true);
+            document.getElementById("inputRedeemCode").value = "";
+        }else{
+            UiController.showTip("redeemResultTip", res.msg, false);
+        }
+    })
+
+    // 生成兑换码按钮
+    document.getElementById("btnCreateCode").addEventListener("click", async ()=>{
+        const reward = document.getElementById("inputRewardText").value.trim();
+        const count = Number(document.getElementById("inputGenCount").value);
+        if(!reward){
+            alert("请填写奖励内容");
+            return;
+        }
+        const {createdList} = await CodeService.batchCreate(count, reward);
+        await UiController.renderGenerateResult(createdList);
+        alert(`成功生成${createdList.length}个兑换码`);
+    })
+
+    // 清空全部兑换码
+    document.getElementById("btnClearAllCode").addEventListener("click", async ()=>{
+        if(!confirm("确定清空所有兑换码？操作不可恢复！")) return;
+        await CloudDB.deleteAllCodes();
+        await UiController.renderRecordList();
+    })
+
+    // 添加免扫地人员
+    document.getElementById("btnAddCleanPerson").addEventListener("click", async ()=>{
+        const nameInput = document.getElementById("inputCleanName").value;
+        const ret = await CleanPersonService.addPerson(nameInput);
+        if(!ret.ok){
+            alert(ret.msg);
+            return;
+        }
+        await UiController.renderCleanPersonList();
+        document.getElementById("inputCleanName").value = "";
+    })
+
+    // 弹窗复制、关闭
+    document.getElementById("modalCopyBtn").addEventListener("click", ()=>{
+        UiController.copyTextToClipboard(UiController.currentModalCode);
+    })
+    document.getElementById("modalCloseBtn").addEventListener("click", ()=>{
+        UiController.closeQrModal();
+    })
+}
+
+// 页面加载完毕启动
+window.addEventListener("DOMContentLoaded", bootstrap);
 </script>
 </body>
 </html>
