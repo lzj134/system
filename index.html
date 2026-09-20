@@ -1,177 +1,142 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>免扫地卡管理系统 · 云端版</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兑换码系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .glass{
+            background:rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
+            border-radius:16px;
+            padding:24px;
         }
-        html, body {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0066ff 0%, #3399ff 100%);
-            background-attachment: fixed;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        .input{
+            width:100%;
+            padding:12px 14px;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            margin-bottom:12px;
+            font-size:16px;
         }
-        /* 登录遮罩 */
-        .auth-wrapper {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 99;
-            padding: 1rem;
-        }
-        /* 玻璃卡片 */
-        .glass {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 1.25rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
-            padding: 1.5rem;
-            width: 100%;
-        }
-        .tab-nav-item {
-            padding: 0.625rem 1.25rem;
-            border-radius: 9999px;
-            border: none;
-            background: rgba(255,255,255,0.15);
-            color: rgba(255,255,255,0.85);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .tab-nav-item.active {
-            background: #ffffff;
-            color: #0066ff;
-            box-shadow: 0 4px 12px rgba(0,102,255,0.2);
-        }
-        .btn-primary {
-            width: 100%;
-            padding: 0.875rem;
-            border-radius: 0.75rem;
-            border: none;
-            font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, #0066ff, #3399ff);
-            cursor: pointer;
-            transition: opacity .2s;
-        }
-        .btn-primary:hover {opacity:0.92;}
-        .btn-danger {
-            width: 100%;
-            padding: 0.875rem;
-            border-radius: 0.75rem;
-            border: none;
-            font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, #ff4444, #ff6666);
-            cursor: pointer;
-            transition: opacity .2s;
-        }
-        .btn-danger:hover {opacity:0.92;}
-        .input-normal {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 2px solid #cce0ff;
-            border-radius: 0.75rem;
-            outline: none;
-            text-align: center;
-            transition: border-color 0.2s;
-        }
-        .input-normal:focus {
-            border-color: #0066ff;
-        }
-        .text-btn-edit {
-            color:#0066ff;
-            font-size:0.875rem;
+        .btn-primary{
+            width:100%;
+            padding:12px;
+            background:#2563eb;
+            color:white;
+            border:none;
+            border-radius:10px;
+            font-size:16px;
             cursor:pointer;
-            margin-left:0.5rem;
         }
-        .text-btn-del {
-            color:#ff4444;
-            font-size:0.875rem;
-            cursor:pointer;
-            margin-left:0.5rem;
-        }
-        /* 弹窗遮罩 */
-        .modal-overlay {
-            position: fixed;
-            inset:0;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 100;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            padding:1rem;
-        }
-        .hide {
-            display: none !important;
-        }
+        .hide{display:none;}
+        [data-tab-panel]{display:none;}
+        [data-tab-panel].active{display:block;}
+        .tab-btn.active{background:#2563eb;color:white;}
     </style>
 </head>
-<body>
-    <!-- 登录验证界面 -->
-    <div id="authScreen" class="auth-wrapper">
-        <div class="glass max-w-md text-center">
-            <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl">🔒</div>
-            <h2 class="mt-4 mb-2 text-xl font-bold text-gray-800">访问验证</h2>
-            <p class="text-sm text-gray-500 mb-2">请输入密钥进入系统</p>
-            <p class="text-sm text-gray-500 mb-6">需要兑换请联系管理员，班长或卫生委员廖志强</p>
-            <input id="secretPwd" type="password" placeholder="输入密钥" class="input-normal mb-4">
-            <button id="authSubmit" class="btn-primary">进入系统</button>
-            <div id="authErrorTip" class="mt-3 text-sm text-red-500 hide">密钥错误，请重试</div>
+<body class="bg-slate-100 min-h-screen py-6 px-4">
+    <div id="loginBox" class="max-w-md mx-auto glass">
+        <h2 class="text-xl font-bold text-center mb-6">管理员登录</h2>
+        <input type="password" id="loginPwd" class="input" placeholder="输入管理员密码">
+        <button id="loginBtn" class="btn-primary">登录</button>
+    </div>
+
+    <div id="mainBox" class="hidden">
+        <div class="max-w-md mx-auto mb-4 flex gap-2">
+            <button class="tab-btn flex-1 py-2 rounded-lg border" data-tab="redeem">兑换</button>
+            <button class="tab-btn flex-1 py-2 rounded-lg border" data-tab="generate">生成兑换码</button>
+            <button class="tab-btn flex-1 py-2 rounded-lg border" data-tab="clean">免扫地人员</button>
+        </div>
+
+        <!-- Tab面板：兑换 -->
+        <div data-tab-panel="redeem" class="glass max-w-md mx-auto active">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400"></div>
+                <h2 class="mt-3 text-xl font-bold text-gray-800">输入兑换码</h2>
+            </div>
+            <input id="inputRedeemCode" maxlength="14" placeholder="XXXX-XXXX-XXXX" class="input">
+            <button id="btnDoRedeem" class="btn-primary">立即兑换</button>
+            <div id="redeemResultTip" class="mt-4 text-center rounded-lg py-2 hide"></div>
+        </div>
+
+        <!-- Tab面板：生成兑换码 -->
+        <div data-tab-panel="generate" class="glass max-w-md mx-auto">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-600 to-green-400"></div>
+                <h2 class="mt-3 text-xl font-bold text-gray-800">生成新兑换码</h2>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <input id="inputReward" placeholder="奖励内容" class="input flex-1">
+                <button id="btnGenCode" class="btn-primary">生成兑换码</button>
+            </div>
+            <div id="genResultTip" class="mt-2 text-center rounded-lg py-2 hide"></div>
+            <div class="mt-4">
+                <h3 class="font-bold mb-2">已生成兑换码列表</h3>
+                <div id="codeListBox" class="bg-white/80 rounded-lg p-3 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- Tab面板：免扫地人员管理 -->
+        <div data-tab-panel="clean" class="glass max-w-md mx-auto">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-amber-600 to-yellow-400"></div>
+                <h2 class="mt-3 text-xl font-bold text-gray-800">免扫地人员名单</h2>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <input id="inputCleanName" placeholder="输入姓名" class="input flex-1">
+                <button id="btnAddClean" class="btn-primary">添加</button>
+            </div>
+            <div id="cleanListBox" class="bg-white/80 rounded-lg p-3 max-h-60 overflow-y-auto"></div>
         </div>
     </div>
 
-    <!-- Tab面板：兑换 -->
-<div data-tab-panel="redeem" class="glass max-w-md mx-auto">
-    <div class="text-center mb-6">
-        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-sky-400"></div>
-        <h2 class="mt-3 text-xl font-bold text-gray-800">输入兑换码</h2>
-    </div>
-    <input id="inputRedeemCode" maxlength="14" placeholder="XXXX-XXXX-XXXX" class="input">
-    <button id="btnDoRedeem" class="btn-primary">立即兑换</button>
-    <div id="redeemResultTip" class="mt-4 text-center rounded-lg py-2 hide"></div>
-</div>
+<script>
+const CONFIG = {
+  AUTH_PASSWORD_HASH: "33b6524013435235366F7720120416392405107921366012001371352140174",
+  SUPABASE_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_kav7LpNfWNP0bWnbQfTtw_NioPGsux",
+  CODE_CHAR_POOL: "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789",
+  CODE_RAW_LEN:12
+};
 
-<!-- Tab面板：生成兑换码 -->
-<div data-tab-panel="generate" class="glass max-w-md mx-auto">
-    <div class="text-center mb-6">
-        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-600 to-green-400"></div>
-        <h2 class="mt-3 text-xl font-bold text-gray-800">生成新兑换码</h2>
-    </div>
-    <div class="flex gap-2 mb-4">
-        <input id="inputReward" placeholder="奖励内容" class="input flex-1">
-        <button id="btnGenCode" class="btn-primary">生成兑换码</button>
-    </div>
-    <div id="genResultTip" class="mt-2 text-center rounded-lg py-2 hide"></div>
-    <div class="mt-4">
-        <h3 class="font-bold mb-2">已生成兑换码列表</h3>
-        <div id="codeListBox" class="bg-white/80 rounded-lg p-3 max-h-60 overflow-y-auto"></div>
-    </div>
-</div>
+// 初始化Supabase客户端，只出现这一次！
+const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
-<!-- Tab面板：免扫地人员管理 -->
-<div data-tab-panel="clean" class="glass max-w-md mx-auto">
-    <div class="text-center mb-6">
-        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-amber-600 to-yellow-400"></div>
-        <h2 class="mt-3 text-xl font-bold text-gray-800">免扫地人员名单</h2>
-    </div>
-    <div class="flex gap-2 mb-4">
-        <input id="inputCleanName" placeholder="输入姓名" class="input flex-1">
-        <button id="btnAddClean" class="btn-primary">添加</button>
-    </div>
-    <div id="cleanListBox" class="bg-white/80 rounded-lg p-3 max-h-60 overflow-y-auto"></div>
-</div>
+// SHA256密码校验
+async function sha256(text){
+    const buf = await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+
+// 登录逻辑
+document.getElementById("loginBtn").addEventListener("click",async ()=>{
+    const pwd = document.getElementById("loginPwd").value;
+    const hash = await sha256(pwd);
+    if(hash === CONFIG.AUTH_PASSWORD_HASH){
+        document.getElementById("loginBox").classList.add("hidden");
+        document.getElementById("mainBox").classList.remove("hidden");
+        loadCodeList();
+        loadCleanList();
+    }else{
+        alert("密码错误");
+    }
+});
+
+// tab切换
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+        const tabName = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+        document.querySelectorAll("[data-tab-panel]").forEach(p=>p.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelector(`[data-tab-panel="${tabName}"]`).classList.add("active");
+    })
+})
+
 // ========== 兑换码业务 ==========
-// 加载兑换码列表
 async function loadCodeList() {
     const { data, error } = await supabase.from('codes').select('*').order('id', { ascending: false });
     if(error) return console.error(error);
@@ -197,13 +162,11 @@ document.getElementById('btnGenCode').addEventListener('click',async ()=>{
         tipDom.className="mt-2 text-center rounded-lg py-2 text-red-500";
         return;
     }
-    //生成随机码
     const pool = CONFIG.CODE_CHAR_POOL;
     let code = '';
     for(let i=0;i<CONFIG.CODE_RAW_LEN;i++){
         code += pool[Math.floor(Math.random()*pool.length)]
     }
-    //插入数据库
     const {error} = await supabase.from('codes').insert({code,reward});
     if(error){
         tipDom.textContent="生成失败:"+error.message;
@@ -236,7 +199,6 @@ document.getElementById('btnDoRedeem').addEventListener('click',async ()=>{
         tipDom.className="mt-4 text-center rounded-lg py-2 text-red-500";
         return;
     }
-    //标记已使用
     const now = new Date().toLocaleString();
     await supabase.from('codes').update({used:true,use_time:now}).eq('id',data.id);
     tipDom.textContent=`兑换成功！奖励：${data.reward}`;
@@ -258,7 +220,6 @@ async function loadCleanList(){
         <button class="text-red-500 text-sm delCleanBtn" data-id="${item.id}">删除</button>`;
         box.appendChild(div);
     })
-    //删除按钮事件
     document.querySelectorAll('.delCleanBtn').forEach(btn=>{
         btn.onclick = async function(){
             const id = this.dataset.id;
@@ -280,398 +241,6 @@ document.getElementById('btnAddClean').addEventListener('click',async ()=>{
     loadCleanList();
 })
 
-//页面加载完成自动加载列表
-window.addEventListener('DOMContentLoaded',()=>{
-    loadCodeList();
-    loadCleanList();
-})
-/*** ====================== 配置常量层（Supabase配置） ======================*/
-const CONFIG = {
-  AUTH_PASSWORD_HASH: "6f3c592d6bf1807eea940d4df92bfe4180b1a77f4304b59f365839114d9a89ee",
-  SUPABASE_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
-  SUPABASE_ANON_KEY: "sb_publishable_kav7LpNfWNP0bWnbQfTtw_NioPGsux",
-  CODE_CHAR_POOL: "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789",
-  CODE_RAW_LEN:12
-};
-
-// 初始化Supabase客户端
-const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-/**
- * ====================== Supabase云端存储层 ======================
- */
-const CloudDB = {
-    // 获取全部兑换码
-    async getCodes(){
-        const {data,error} = await supabase.from("codes").select("*");
-        if(error){
-            console.error("读取兑换码失败",error);
-            return [];
-        }
-        return data;
-    },
-    // 批量插入兑换码
-    async insertCodes(list){
-        const {error} = await supabase.from("codes").insert(list);
-        if(error) throw error;
-    },
-    // 更新兑换码状态（标记已兑换+记录时间）
-    async updateCodeUsed(codeStr, timeStr){
-        const {error} = await supabase.from("codes").update({used:true, use_time:timeStr}).eq("code",codeStr);
-        if(error) throw error;
-    },
-    // 修改备注
-    async updateRemark(codeStr, remarkText){
-        const {error} = await supabase.from("codes").update({remark:remarkText}).eq("code",codeStr);
-        if(error) throw error;
-    },
-    // 删除单条兑换码
-    async deleteCode(codeStr){
-        const {error} = await supabase.from("codes").delete().eq("code",codeStr);
-        if(error) throw error;
-    },
-    // 清空全部兑换码
-    async deleteAllCodes(){
-        const {error} = await supabase.from("codes").delete().neq("id",0);
-        if(error) throw error;
-    },
-
-    // 免扫人员相关
-    async getCleanList(){
-        const {data,error} = await supabase.from("clean").select("*");
-        if(error){
-            console.error("读取人员失败",error);
-            return [];
-        }
-        return data;
-    },
-    async addCleanName(name){
-        const {error} = await supabase.from("clean").insert([{name}]);
-        if(error) throw error;
-    },
-    async deleteCleanById(id){
-        const {error} = await supabase.from("clean").delete().eq("id",id);
-        if(error) throw error;
-    }
-};
-
-/**
- * ====================== 业务模型层 ======================
- */
-const CodeService = {
-    generateOneCode(){
-        let res = "";
-        const pool = CONFIG.CODE_CHAR_POOL;
-        for(let i=0; i<CONFIG.CODE_RAW_LEN; i++){
-            if(i>0 && i%4 === 0){
-                res += "-";
-            }
-            const randIdx = Math.floor(Math.random() * pool.length);
-            res += pool[randIdx];
-        }
-        return res;
-    },
-    async batchCreate(count, rewardText){
-        const allCodes = await CloudDB.getCodes();
-        const createdList = [];
-        const insertArr = [];
-        for(let i=0; i<count; i++){
-            let newCode;
-            do{
-                newCode = this.generateOneCode();
-            }while(allCodes.find(x=>x.code === newCode));
-            insertArr.push({
-                code: newCode,
-                reward: rewardText,
-                used: false,
-                use_time: "",
-                remark: ""
-            });
-            createdList.push(newCode);
-        }
-        await CloudDB.insertCodes(insertArr);
-        return {createdList};
-    },
-    async doRedeem(inputRaw){
-        const pure = inputRaw.replace(/-/g,"").toUpperCase();
-        if(pure.length !== CONFIG.CODE_RAW_LEN){
-            return {ok:false, msg:"格式错误"};
-        }
-        const standardCode = `${pure.slice(0,4)}-${pure.slice(4,8)}-${pure.slice(8,12)}`;
-        const allCodes = await CloudDB.getCodes();
-        const findItem = allCodes.find(x=>x.code === standardCode);
-        if(!findItem) return {ok:false, msg:"无效兑换码"};
-        if(findItem.used) return {ok:false, msg:"已使用"};
-        const nowTime = new Date().toLocaleString();
-        await CloudDB.updateCodeUsed(standardCode, nowTime);
-        return {ok:true, msg:"兑换成功 🎉", code:standardCode};
-    }
-};
-
-const CleanPersonService = {
-    async addPerson(name){
-        const trimName = name.trim();
-        if(!trimName) return {ok:false, msg:"请输入姓名"};
-        const list = await CloudDB.getCleanList();
-        if(list.find(x=>x.name === trimName)) return {ok:false, msg:"该人员已存在"};
-        await CloudDB.addCleanName(trimName);
-        return {ok:true};
-    },
-    async deletePerson(id){
-        await CloudDB.deleteCleanById(id);
-        return true;
-    }
-};
-
-/**
- * ====================== UI视图控制层 ======================
- */
-const UiController = {
-    currentModalCode:"",
-    initTab(){
-        const tabBtns = document.querySelectorAll(".tab-nav-item");
-        tabBtns.forEach(btn=>{
-            btn.addEventListener("click", async ()=>{
-                const key = btn.dataset.tabKey;
-                await this.switchTab(key);
-            })
-        })
-    },
-    async switchTab(tabKey){
-        document.querySelectorAll(".tab-nav-item").forEach(b=>b.classList.remove("active"));
-        document.querySelector(`[data-tab-key="${tabKey}"]`).classList.add("active");
-        document.querySelectorAll("[data-tab-panel]").forEach(panel=>panel.classList.add("hide"));
-        document.querySelector(`[data-tab-panel="${tabKey}"]`).classList.remove("hide");
-
-        if(tabKey === "records") await this.renderRecordList();
-        if(tabKey === "cleanList") await this.renderCleanPersonList();
-    },
-    showTip(elId, text, isSuccess){
-        const el = document.getElementById(elId);
-        el.classList.remove("hide", "bg-green-100", "text-green-700", "bg-red-100", "text-red-700");
-        if(isSuccess){
-            el.classList.add("bg-green-100", "text-green-700");
-        }else{
-            el.classList.add("bg-red-100", "text-red-700");
-        }
-        el.innerText = text;
-        el.classList.remove("hide");
-        setTimeout(()=>{ el.classList.add("hide"); }, 3000);
-    },
-    async renderRecordList(){
-        const codeData = await CloudDB.getCodes();
-        const wrap = document.getElementById("recordRenderBody");
-        const emptyTip = document.getElementById("recordEmptyText");
-        wrap.innerHTML = "";
-        if(codeData.length === 0){
-            emptyTip.classList.remove("hide");
-            return;
-        }
-        emptyTip.classList.add("hide");
-        codeData.forEach(item=>{
-            const statusHtml = item.used ? `<span class="text-red-600">已使用</span>` : `<span class="text-green-600">未使用</span>`;
-            const timeStr = item.use_time || "无";
-            const remarkStr = item.remark || "暂无备注";
-            const div = document.createElement("div");
-            div.className = "p-3 border-b border-gray-100";
-            div.innerHTML = `
-                <div>兑换码：${item.code}</div>
-                <div>奖励：${item.reward}</div>
-                <div>状态：${statusHtml}</div>
-                <div>使用时间：${timeStr}</div>
-                <div>备注：${remarkStr}
-                    <span class="text-btn-edit" data-edit-code="${item.code}">编辑备注</span>
-                    <span class="text-btn-del" data-del-code="${item.code}">删除</span>
-                </div>
-            `;
-            wrap.appendChild(div);
-        })
-        document.querySelectorAll("[data-edit-code]").forEach(dom=>{
-            dom.onclick = async ()=>{
-                const c = dom.dataset.editCode;
-                const oldVal = codeData.find(x=>x.code===c).remark || "";
-                const inputVal = prompt("修改备注", oldVal);
-                if(inputVal === null) return;
-                await CloudDB.updateRemark(c, inputVal);
-                await this.renderRecordList();
-            }
-        })
-        document.querySelectorAll("[data-del-code]").forEach(dom=>{
-            dom.onclick = async ()=>{
-                const c = dom.dataset.delCode;
-                if(!confirm("确定删除此兑换码？")) return;
-                await CloudDB.deleteCode(c);
-                await this.renderRecordList();
-            }
-        })
-    },
-    async renderCleanPersonList(){
-        const list = await CloudDB.getCleanList();
-        const wrap = document.getElementById("cleanRenderBody");
-        const emptyTip = document.getElementById("cleanEmptyText");
-        wrap.innerHTML = "";
-        if(list.length === 0){
-            emptyTip.classList.remove("hide");
-            return;
-        }
-        emptyTip.classList.add("hide");
-        list.forEach((row)=>{
-            const div = document.createElement("div");
-            div.className = "p-3 border-b border-gray-100 flex justify-between items-center";
-            div.innerHTML = `<span>${row.name}</span><span class="text-btn-del" data-clean-id="${row.id}">删除</span>`;
-            wrap.appendChild(div);
-        })
-        document.querySelectorAll("[data-clean-id]").forEach(dom=>{
-            dom.onclick = async ()=>{
-                const id = Number(dom.dataset.cleanId);
-                if(confirm("确定删除该人员？")){
-                    await CleanPersonService.deletePerson(id);
-                    await this.renderCleanPersonList();
-                }
-            }
-        })
-    },
-    openQrModal(codeStr){
-        this.currentModalCode = codeStr;
-        const modal = document.getElementById("qrModal");
-        const qrDom = document.getElementById("modalQrDom");
-        qrDom.innerHTML = "";
-        const qrUrl = location.origin + location.pathname + "?code=" + codeStr;
-        new QRCode(qrDom, {text: qrUrl, width:160, height:160});
-        document.getElementById("modalShowCode").innerText = codeStr;
-        modal.classList.remove("hide");
-    },
-    closeQrModal(){
-        document.getElementById("qrModal").classList.add("hide");
-    },
-    async copyTextToClipboard(text){
-        try{
-            await navigator.clipboard.writeText(text);
-            alert("复制成功");
-        }catch(err){
-            alert("复制失败，请手动复制");
-        }
-    },
-    async renderGenerateResult(createdCodeList){
-        const gridWrap = document.getElementById("qrRenderGrid");
-        const listWrap = document.getElementById("codeOutputList");
-        gridWrap.innerHTML = "";
-        listWrap.innerHTML = "";
-        createdCodeList.forEach(code=>{
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "text-center";
-            const qrBox = document.createElement("div");
-            const qrUrl = location.origin + location.pathname + "?code=" + code;
-            new QRCode(qrBox, {text: qrUrl, width:100, height:100});
-            itemDiv.appendChild(qrBox);
-            const codeTextDiv = document.createElement("div");
-            codeTextDiv.className = "mt-1 text-sm font-mono text-blue-600";
-            codeTextDiv.innerText = code;
-            itemDiv.appendChild(codeTextDiv);
-            itemDiv.style.cursor = "pointer";
-            itemDiv.onclick = ()=>this.openQrModal(code);
-            gridWrap.appendChild(itemDiv);
-
-            const lineDiv = document.createElement("div");
-            lineDiv.className = "p-2 bg-gray-50 rounded flex justify-between mt-1";
-            lineDiv.innerHTML = `<span class="font-mono text-sm">${code}</span>`;
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "text-blue-500";
-            copyBtn.innerText = "复制";
-            copyBtn.onclick = ()=>this.copyTextToClipboard(code);
-            lineDiv.appendChild(copyBtn);
-            listWrap.appendChild(lineDiv);
-        })
-    },
-    parseUrlCodeParam(){
-        const params = new URLSearchParams(location.search);
-        const codeFromUrl = params.get("code");
-        if(codeFromUrl){
-            this.switchTab("redeem");
-            document.getElementById("inputRedeemCode").value = codeFromUrl.toUpperCase();
-        }
-    }
-};
-
-/**
- * ====================== 入口初始化与事件绑定 ======================
- */
-async function bootstrap(){
-    UiController.initTab();
-
-    // 登录按钮
-    document.getElementById("authSubmit").addEventListener("click", async ()=>{
-        const inputPwd = document.getElementById("secretPwd").value.trim();
-        const errTip = document.getElementById("authErrorTip");
-        const inputHash = await sha256(inputPwd);
-        if(inputHash === CONFIG.AUTH_PASSWORD_HASH){
-            document.getElementById("authScreen").classList.add("hide");
-            document.getElementById("mainApp").classList.remove("hide");
-            UiController.parseUrlCodeParam();
-        }else{
-            errTip.classList.remove("hide");
-        }
-    })
-
-    // 登录框回车
-    document.getElementById("secretPwd").addEventListener("keydown", async e=>{
-        if(e.key === "Enter") document.getElementById("authSubmit").click();
-    })
-
-    // 兑换按钮
-    document.getElementById("btnDoRedeem").addEventListener("click", async ()=>{
-        const inputVal = document.getElementById("inputRedeemCode").value;
-        const res = await CodeService.doRedeem(inputVal);
-        if(res.ok){
-            UiController.showTip("redeemResultTip", res.msg, true);
-            document.getElementById("inputRedeemCode").value = "";
-        }else{
-            UiController.showTip("redeemResultTip", res.msg, false);
-        }
-    })
-
-    // 生成兑换码按钮
-    document.getElementById("btnCreateCode").addEventListener("click", async ()=>{
-        const reward = document.getElementById("inputRewardText").value.trim();
-        const count = Number(document.getElementById("inputGenCount").value);
-        if(!reward){
-            alert("请填写奖励内容");
-            return;
-        }
-        const {createdList} = await CodeService.batchCreate(count, reward);
-        await UiController.renderGenerateResult(createdList);
-        alert(`成功生成${createdList.length}个兑换码`);
-    })
-
-    // 清空全部兑换码
-    document.getElementById("btnClearAllCode").addEventListener("click", async ()=>{
-        if(!confirm("确定清空所有兑换码？操作不可恢复！")) return;
-        await CloudDB.deleteAllCodes();
-        await UiController.renderRecordList();
-    })
-
-    // 添加免扫地人员
-    document.getElementById("btnAddCleanPerson").addEventListener("click", async ()=>{
-        const nameInput = document.getElementById("inputCleanName").value;
-        const ret = await CleanPersonService.addPerson(nameInput);
-        if(!ret.ok){
-            alert(ret.msg);
-            return;
-        }
-        await UiController.renderCleanPersonList();
-        document.getElementById("inputCleanName").value = "";
-    })
-
-    // 弹窗复制、关闭
-    document.getElementById("modalCopyBtn").addEventListener("click", ()=>{
-        UiController.copyTextToClipboard(UiController.currentModalCode);
-    })
-    document.getElementById("modalCloseBtn").addEventListener("click", ()=>{
-        UiController.closeQrModal();
-    })
-}
-
-// 页面加载完毕启动
-window.addEventListener("DOMContentLoaded", bootstrap);
 </script>
 </body>
 </html>
