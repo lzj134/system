@@ -4,114 +4,281 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>免扫地卡管理系统</title>
-    <!-- 样式CDN -->
+    <!-- 样式库 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 替换为unpkg的supabase，稳定性更好 -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2.49.8"></script>
-    <!-- qrcodejs -->
-    <script src="https://cdn.jsdelivr.net/npm/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    
+    <!-- 数据库库 完整UMD路径 绝对不会404 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
+    
+    <!-- 二维码相关库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <style>
-        /* 这里保留你原来所有自定义css样式，不要删 */
+        * {margin: 0;padding: 0;box-sizing: border-box;font-family: "Segoe UI", system-ui, sans-serif;}
         body {
-            background-color: #0f172a;
+            background: #0f172a;
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(59,130,246,0.15) 0%, transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139,92,246,0.12) 0%, transparent 45%);
+            min-height: 100vh;
             color: #e2e8f0;
-            font-family: system-ui, sans-serif;
         }
-        .menu-btn{
-            background:#1e293b;
-            border:1px solid #334155;
-            padding:24px 12px;
-            border-radius:10px;
-            cursor:pointer;
-            transition:0.2s;
+        .glass-card {
+            background: rgba(15,23,42,0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(99,102,241,0.25);
+            box-shadow: 0 0 30px rgba(79,70,229,0.15);
+            border-radius: 18px;
+            padding: 28px;
         }
-        .menu-btn:hover{
-            background:#334155;
+        .neon-title {
+            text-shadow: 0 0 8px #6366f1, 0 0 16px #818cf8;
+            letter-spacing: 1px;
         }
-        .page{
-            display:none;
+        .tech-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(30,41,59,0.8);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 15px;
+            outline: none;
         }
-        .page.active{
-            display:block;
+        .tech-input:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129,140,248,0.2);
+        }
+        .tech-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79,70,229,0.3);
+        }
+        .tech-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79,70,229,0.45);
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .menu-item {
+            padding: 24px 16px;
+            border-radius: 14px;
+            background: rgba(30,41,59,0.6);
+            border: 1px solid rgba(99,102,241,0.2);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .menu-item:hover {
+            background: rgba(49,57,83,0.7);
+            border-color: #818cf8;
+            transform: translateY(-3px);
+        }
+        .menu-item i {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #818cf8;
+        }
+        .list-row {
+            padding: 12px;
+            border-bottom: 1px solid rgba(99,102,241,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-ok {color: #34d399;}
+        .status-used {color: #f87171;}
+        .del-btn {
+            color: #f87171;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .del-btn:hover {background: rgba(248,113,113,0.15);}
+        .tip-ok {color: #34d399; text-align: center; padding: 10px;}
+        .tip-err {color: #f87171; text-align: center; padding: 10px;}
+        .hidden {display: none !important;}
+        .back-btn {
+            margin-bottom: 16px;
+            display: inline-block;
+            padding: 8px 16px;
+            background: #334155;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #reader {width: 100%; max-width: 400px; margin: 0 auto;}
+        .code-card {
+            background: #fff;
+            color: #111;
+            border-radius: 12px;
+            padding: 16px;
+            width: 220px;
+            text-align: center;
+            margin: 10px;
+            display: inline-block;
+        }
+        .qrcode-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .code-text {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
         }
     </style>
 </head>
 <body>
-    <!-- 页面HTML结构，保留你原来全部DOM，不要改动 -->
-    <div id="loginPage" class="page active">
-        <div class="max-w-md mx-auto mt-32 p-6">
-            <h2 class="text-2xl text-center mb-6">免扫地卡管理系统</h2>
-            <input type="password" id="pwdInput" class="w-full p-3 rounded bg-slate-800 border border-slate-600 mb-4" placeholder="请输入密码">
-            <button id="loginBtn" class="w-full bg-blue-600 p-3 rounded">登录</button>
+    <!-- 登录页 -->
+    <div id="page-login" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-3">🔐</div>
+                <h2 class="text-2xl font-bold neon-title">云端管理系统</h2>
+                <p class="text-sm text-slate-400 mt-2">请输入访问密码验证身份</p>
+            </div>
+            <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密码">
+            <button id="login-btn" class="tech-btn">
+                <i class="fa fa-shield"></i> 身份验证
+            </button>
+            <div id="login-tip" class="tip-err mt-3 hidden">密码错误，请重试</div>
         </div>
     </div>
 
-    <div id="mainPage" class="page">
-        <div class="max-w-4xl mx-auto p-4">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-bold">免扫地卡管理系统</h1>
-                <button id="logoutBtn" class="bg-red-600 px-4 py-2 rounded text-white">退出登录</button>
+    <!-- 主菜单 -->
+    <div id="page-menu" class="hidden p-4 md:p-8">
+        <div class="max-w-5xl mx-auto">
+            <div class="glass-card mb-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地卡管理系统</h1>
+                    <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出登录</button>
+                </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="menu-btn text-center" data-page="exchangePage">
-                    <div class="text-2xl mb-1">🎁</div>
+            <div class="menu-grid">
+                <div class="menu-item" data-goto="redeem">
+                    <i class="fa fa-gift"></i>
                     <div>兑换码兑换</div>
                 </div>
-                <div class="menu-btn text-center" data-page="genPage">
-                    <div class="text-2xl mb-1">🔑</div>
+                <div class="menu-item" data-goto="generate">
+                    <i class="fa fa-key"></i>
                     <div>生成兑换码</div>
                 </div>
-                <div class="menu-btn text-center" data-page="recordPage">
-                    <div class="text-2xl mb-1">🔄</div>
+                <div class="menu-item" data-goto="record">
+                    <i class="fa fa-history"></i>
                     <div>兑换记录</div>
                 </div>
-                <div class="menu-btn text-center" data-page="userPage">
-                    <div class="text-2xl mb-1">🐾</div>
+                <div class="menu-item" data-goto="clean">
+                    <i class="fa fa-users"></i>
                     <div>免扫地人员表</div>
                 </div>
-                <div class="menu-btn text-center" data-page="scanPage">
-                    <div class="text-2xl mb-1">📱</div>
+                <div class="menu-item" data-goto="scan">
+                    <i class="fa fa-qrcode"></i>
                     <div>扫码兑换</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 下面是各个子页面DOM，你原来的全部保留，不要删 -->
-    <div id="exchangePage" class="page max-w-4xl mx-auto p-4">
-        <h2 class="text-xl mb-4">兑换码兑换</h2>
-        <input id="codeInput" class="w-full p-3 bg-slate-800 border border-slate-600 rounded mb-3" placeholder="输入兑换码">
-        <button id="doExchangeBtn" class="bg-blue-600 px-4 py-2 rounded text-white">执行兑换</button>
+    <!-- 兑换码兑换页 -->
+    <div id="page-redeem" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">兑换码核验</h3>
+                <input id="redeem-input" class="tech-input mb-4" placeholder="请输入兑换密钥">
+                <button id="redeem-btn" class="tech-btn"><i class="fa fa-check-circle"></i> 立即兑换</button>
+                <div id="redeem-tip" class="mt-4"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="genPage" class="page max-w-4xl mx-auto p-4">
-        <h2 class="text-xl mb-4">生成兑换码</h2>
-        <input type="number" id="genCount" class="w-full p-3 bg-slate-800 border border-slate-600 rounded mb-3" placeholder="生成数量" value="1">
-        <button id="genBtn" class="bg-green-600 px-4 py-2 rounded text-white mb-4">生成兑换码</button>
-        <div id="genResult"></div>
+    <!-- 生成兑换码页 -->
+    <div id="page-generate" class="hidden p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">创建新兑换密钥</h3>
+                <div class="space-y-4 mb-4">
+                    <input id="reward-input" class="tech-input" placeholder="奖励内容（如：免扫地一次）">
+                    <div class="flex gap-3">
+                        <input id="count-input" type="number" value="1" min="1" max="10" class="tech-input w-24">
+                        <button id="gen-btn" class="tech-btn flex-1"><i class="fa fa-magic"></i> 一键生成</button>
+                    </div>
+                </div>
+                <div id="gen-tip" class="mb-4"></div>
+                <h4 class="font-semibold mb-2 text-sm text-slate-300">生成卡片（上方二维码，下方兑换码）</h4>
+                <div id="card-list" class="card-grid"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="recordPage" class="page max-w-4xl mx-auto p-4">
-        <h2 class="text-xl mb-4">兑换记录</h2>
-        <div id="recordList"></div>
+    <!-- 兑换记录页 -->
+    <div id="page-record" class="hidden p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">兑换记录</h3>
+                <div id="record-list" class="bg-slate-900/60 rounded-xl max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="userPage" class="page max-w-4xl mx-auto p-4">
-        <h2 class="text-xl mb-4">免扫地人员表</h2>
-        <div id="userList"></div>
+    <!-- 免扫地人员页 -->
+    <div id="page-clean" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">免扫地人员管理</h3>
+                <div class="flex gap-3 mb-4">
+                    <input id="name-input" class="tech-input flex-1" placeholder="输入人员姓名">
+                    <button id="add-name-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
+                </div>
+                <div id="name-list" class="bg-slate-900/60 rounded-xl max-h-96 overflow-y-auto"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="scanPage" class="page max-w-4xl mx-auto p-4">
-        <h2 class="text-xl mb-4">扫码兑换</h2>
-        <div id="qrcodeBox"></div>
+    <!-- 扫码兑换页 -->
+    <div id="page-scan" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">扫码兑换</h3>
+                <div id="reader"></div>
+                <div id="scan-tip" class="mt-4"></div>
+                <button id="scan-stop-btn" class="tech-btn mt-4 hidden" style="background: linear-gradient(135deg,#334155,#475569)">停止摄像头</button>
+            </div>
+        </div>
     </div>
-
 
     <script>
-        // 全部业务代码包裹在DOMContentLoaded，确保页面DOM全部加载完再运行
-        document.addEventListener('DOMContentLoaded', () => {
+        // 页面DOM加载完成后再执行所有代码
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("页面加载完成，开始初始化");
+
+            // ========== 配置 ==========
             const CONFIG = {
+                // 密码：2414777 对应SHA256大写
                 AUTH_HASH: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",
                 SUPA_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
                 SUPA_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTtw_NioPGsux",
@@ -119,54 +286,310 @@
                 CODE_LEN: 12
             };
 
-            let sb;
-            console.log("window.supabase:", window.supabase);
-            if(window.supabase && window.supabase.createClient){
-                sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
-                console.log("✅supabase初始化成功");
-            }else{
-                alert("❌数据库模块加载失败！请按Ctrl+F5强制刷新页面");
-                console.error("❌supabase没有加载成功！");
-                return;
+            // ========== 工具：SHA256加密 ==========
+            async function sha256(text) {
+                const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+                return Array.from(new Uint8Array(buf))
+                    .map(b => b.toString(16).padStart(2, "0"))
+                    .join("")
+                    .toUpperCase();
             }
 
-            // ==========下面粘贴你原来全部JS逻辑代码（登录、页面切换、生成码、兑换、查询、扫码）==========
-            // 【你的原有全部代码从这里开始】
-            // 页面切换函数
-            function showPage(pageId){
-                document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-                document.getElementById(pageId).classList.add('active');
+            // ========== 页面切换工具 ==========
+            const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-scan"];
+            function showPage(pageId) {
+                allPages.forEach(p => document.getElementById(p).classList.add("hidden"));
+                document.getElementById(pageId).classList.remove("hidden");
+                
+                // 离开扫码页关闭摄像头
+                let scanScanner = window._scanScanner;
+                if(pageId !== "page-scan" && scanScanner) {
+                    scanScanner.stop().catch(()=>{});
+                    window._scanScanner = null;
+                    document.getElementById("scan-stop-btn").classList.add("hidden");
+                }
+
+                // 进入对应页面刷新数据
+                if(pageId === "page-record") loadRecordList();
+                if(pageId === "page-clean") loadNameList();
+                if(pageId === "page-scan") startScan();
             }
 
-            // 登录逻辑
-            document.getElementById('loginBtn').addEventListener('click', async ()=>{
-                const pwd = document.getElementById('pwdInput').value;
-                // 简单密码校验，你原来的逻辑
-                const hash = await crypto.subtle.digest('SHA‑256', new TextEncoder().encode(pwd));
-                const hex = Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
-                if(hex === CONFIG.AUTH_HASH){
-                    showPage('mainPage');
-                }else{
-                    alert("密码错误");
+            // ========== 登录逻辑（完全独立，不依赖数据库） ==========
+            const pwdInput = document.getElementById("pwd-input");
+            const loginBtn = document.getElementById("login-btn");
+            const loginTip = document.getElementById("login-tip");
+            const logoutBtn = document.getElementById("logout-btn");
+
+            loginBtn.addEventListener("click", async function() {
+                const pwd = pwdInput.value.trim();
+                if(!pwd) {
+                    loginTip.classList.remove("hidden");
+                    return;
+                }
+                try {
+                    const hash = await sha256(pwd);
+                    if(hash === CONFIG.AUTH_HASH) {
+                        loginTip.classList.add("hidden");
+                        showPage("page-menu");
+                        console.log("登录成功");
+                    } else {
+                        loginTip.classList.remove("hidden");
+                    }
+                } catch(e) {
+                    alert("加密组件加载失败，请使用HTTPS地址访问本页面");
+                    console.error(e);
                 }
             });
 
-            document.getElementById('logoutBtn').addEventListener('click', ()=>{
-                showPage('loginPage');
+            // 回车登录
+            pwdInput.addEventListener("keydown", function(e) {
+                if(e.key === "Enter") loginBtn.click();
             });
 
-            // 菜单按钮点击
-            document.querySelectorAll('.menu-btn').forEach(btn=>{
-                btn.addEventListener('click', ()=>{
-                    const pid = btn.dataset.page;
-                    showPage(pid);
-                })
+            logoutBtn.addEventListener("click", function() {
+                showPage("page-login");
+                pwdInput.value = "";
+                loginTip.classList.add("hidden");
             });
 
-            // 这里继续把你剩下所有代码：生成兑换码、兑换逻辑、读取记录、人员表、二维码扫码全部粘贴进来
-            // 【你的原有全部代码到此结束】
+            // ========== 菜单跳转 & 返回 ==========
+            document.querySelectorAll("[data-goto]").forEach(function(el) {
+                el.addEventListener("click", function() {
+                    showPage("page-" + el.dataset.goto);
+                });
+            });
+            document.querySelectorAll("[data-back]").forEach(function(el) {
+                el.addEventListener("click", function() {
+                    showPage("page-" + el.dataset.back);
+                });
+            });
 
+            // ========== 初始化数据库 ==========
+            let sb = null;
+            try {
+                if(window.supabase && window.supabase.createClient) {
+                    sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
+                    console.log("✅ 数据库初始化成功");
+                } else {
+                    throw new Error("数据库库未加载");
+                }
+            } catch(e) {
+                console.error("❌ 数据库初始化失败", e);
+                // 不阻塞登录，只提示功能异常
+            }
+
+            // ========== 生成兑换码 ==========
+            function randomCode() {
+                let code = "";
+                for (let i = 0; i < CONFIG.CODE_LEN; i++) {
+                    if (i > 0 && i % 4 === 0) code += "-";
+                    code += CONFIG.CODE_POOL[Math.floor(Math.random() * CONFIG.CODE_POOL.length)];
+                }
+                return code;
+            }
+
+            const rewardInput = document.getElementById("reward-input");
+            const countInput = document.getElementById("count-input");
+            const genBtn = document.getElementById("gen-btn");
+            const genTip = document.getElementById("gen-tip");
+            const cardList = document.getElementById("card-list");
+
+            genBtn.addEventListener("click", async function() {
+                if(!sb) {
+                    genTip.innerHTML = '<div class="tip-err">数据库未连接，无法生成</div>';
+                    return;
+                }
+                const reward = rewardInput.value.trim();
+                const count = parseInt(countInput.value) || 1;
+                if (!reward) {
+                    genTip.innerHTML = '<div class="tip-err">请填写奖励内容</div>';
+                    return;
+                }
+
+                const insertData = [];
+                const newCodes = [];
+                for (let i = 0; i < count; i++) {
+                    const code = randomCode();
+                    insertData.push({ code: code, reward: reward, used: false });
+                    newCodes.push(code);
+                }
+
+                const { error } = await sb.from("codes").insert(insertData);
+                if (error) {
+                    genTip.innerHTML = `<div class="tip-err">生成失败：${error.message}</div>`;
+                    return;
+                }
+
+                genTip.innerHTML = `<div class="tip-ok">✅ 成功生成 ${count} 个兑换密钥</div>`;
+                rewardInput.value = "";
+                cardList.innerHTML = "";
+
+                // 渲染二维码卡片
+                newCodes.forEach(function(code) {
+                    const card = document.createElement("div");
+                    card.className = "code-card";
+                    const qrId = "qr-" + code.replace(/-/g, "");
+                    card.innerHTML = `
+                        <div class="qrcode-wrap" id="${qrId}"></div>
+                        <div class="code-text">${code}</div>
+                    `;
+                    cardList.appendChild(card);
+                    new QRCode(document.getElementById(qrId), { text: code, width: 140, height: 140 });
+                });
+            });
+
+            // ========== 通用兑换逻辑 ==========
+            async function doRedeem(codeStr) {
+                if(!sb) return { ok: false, msg: "数据库未连接" };
+                const code = codeStr.trim().toUpperCase();
+                if (!code) return { ok: false, msg: "请输入兑换密钥" };
+
+                const { data, error } = await sb.from("codes").select("*").eq("code", code).single();
+                if (error || !data) return { ok: false, msg: "❌ 无效的兑换密钥" };
+                if (data.used) return { ok: false, msg: "⚠️ 该密钥已被使用" };
+
+                const now = new Date().toLocaleString();
+                await sb.from("codes").update({ used: true, use_time: now }).eq("id", data.id);
+                return { ok: true, msg: `🎉 兑换成功！奖励：${data.reward}` };
+            }
+
+            // 手动兑换
+            const redeemInput = document.getElementById("redeem-input");
+            const redeemBtn = document.getElementById("redeem-btn");
+            const redeemTip = document.getElementById("redeem-tip");
+
+            redeemBtn.addEventListener("click", async function() {
+                const res = await doRedeem(redeemInput.value);
+                redeemTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
+                if(res.ok) redeemInput.value = "";
+            });
+
+            // ========== 兑换记录 ==========
+            const recordList = document.getElementById("record-list");
+            async function loadRecordList() {
+                if(!sb) {
+                    recordList.innerHTML = '<div class="p-3 text-red-400">数据库未连接</div>';
+                    return;
+                }
+                const { data, error } = await sb.from("codes").select("*").eq("used", true).order("use_time", { ascending: false });
+                recordList.innerHTML = "";
+                if(error) {
+                    recordList.innerHTML = `<div class="p-3 text-red-400">读取失败：${error.message}</div>`;
+                    return;
+                }
+                if(data.length === 0) {
+                    recordList.innerHTML = '<div class="p-3 text-slate-500 text-center">暂无兑换记录</div>';
+                    return;
+                }
+                data.forEach(function(item) {
+                    const row = document.createElement("div");
+                    row.className = "list-row";
+                    row.innerHTML = `
+                        <div>
+                            <div class="font-mono">${item.code}</div>
+                            <div class="text-xs text-slate-400">奖励：${item.reward}</div>
+                        </div>
+                        <div class="text-xs text-slate-300">${item.use_time || ""}</div>
+                    `;
+                    recordList.appendChild(row);
+                });
+            }
+
+            // ========== 免扫地人员 ==========
+            const nameInput = document.getElementById("name-input");
+            const addNameBtn = document.getElementById("add-name-btn");
+            const nameList = document.getElementById("name-list");
+
+            async function loadNameList() {
+                if(!sb) {
+                    nameList.innerHTML = '<div class="p-3 text-red-400">数据库未连接</div>';
+                    return;
+                }
+                const { data, error } = await sb.from("clean").select("*").order("id", { ascending: false });
+                nameList.innerHTML = "";
+                if(error) {
+                    nameList.innerHTML = `<div class="p-3 text-red-400">读取失败：${error.message}</div>`;
+                    return;
+                }
+                if(data.length === 0) {
+                    nameList.innerHTML = '<div class="p-3 text-slate-500 text-center">暂无人员</div>';
+                    return;
+                }
+                data.forEach(function(item) {
+                    const row = document.createElement("div");
+                    row.className = "list-row";
+                    row.innerHTML = `<span>${item.name}</span><span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>`;
+                    nameList.appendChild(row);
+                });
+                document.querySelectorAll(".del-btn").forEach(function(btn) {
+                    btn.addEventListener("click", async function() {
+                        await sb.from("clean").delete().eq("id", btn.dataset.id);
+                        loadNameList();
+                    });
+                });
+            }
+
+            addNameBtn.addEventListener("click", async function() {
+                if(!sb) {
+                    alert("数据库未连接");
+                    return;
+                }
+                const name = nameInput.value.trim();
+                if (!name) return;
+                const { error } = await sb.from("clean").insert({ name: name });
+                if(error) {
+                    alert("添加失败，姓名不能重复");
+                    return;
+                }
+                nameInput.value = "";
+                loadNameList();
+            });
+
+            // ========== 扫码兑换 ==========
+            const scanTip = document.getElementById("scan-tip");
+            const scanStopBtn = document.getElementById("scan-stop-btn");
+
+            async function startScan() {
+                if(!window.Html5Qrcode) {
+                    scanTip.innerHTML = '<div class="tip-err">扫码组件加载失败</div>';
+                    return;
+                }
+                scanTip.innerHTML = "";
+                scanStopBtn.classList.remove("hidden");
+                
+                const scanner = new Html5Qrcode("reader");
+                window._scanScanner = scanner;
+
+                scanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    async function(decodedText) {
+                        const res = await doRedeem(decodedText);
+                        scanTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
+                        scanner.stop().then(function() {
+                            window._scanScanner = null;
+                            scanStopBtn.classList.add("hidden");
+                        });
+                    },
+                    function() {}
+                ).catch(function(err) {
+                    scanTip.innerHTML = `<div class="tip-err">摄像头启动失败：${err}</div>`;
+                });
+            }
+
+            scanStopBtn.addEventListener("click", function() {
+                if(window._scanScanner) {
+                    window._scanScanner.stop().then(function() {
+                        window._scanScanner = null;
+                        scanStopBtn.classList.add("hidden");
+                    });
+                }
+            });
+
+            console.log("✅ 全部初始化完成");
         });
     </script>
 </body>
 </html>
+
