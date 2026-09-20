@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>免扫地卡管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 替换为稳定固定版本supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
@@ -37,9 +38,7 @@
             transition:all 0.3s;box-shadow:0 4px 15px rgba(79,70,229,0.3);
         }
         .tech-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(79,70,229,0.45)}
-        .tech-btn-secondary{
-            background:linear-gradient(135deg,#334155,#475569);
-        }
+        .tech-btn-secondary{background:linear-gradient(135deg,#334155,#475569)}
         .menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
         .menu-item{
             padding:24px 16px;border-radius:14px;background:rgba(30,41,59,0.6);
@@ -58,34 +57,14 @@
         .hidden{display:none !important}
         .back-btn{margin-bottom:16px;display:inline-block;padding:8px 16px;background:#334155;border-radius:8px;cursor:pointer}
         #reader{width:100%;max-width:400px;margin:0 auto}
-        /* 兑换码卡片样式：上二维码，下兑换码 */
+        /*兑换卡片样式*/
         .code-card{
-            background:#ffffff;
-            color:#111;
-            border-radius:12px;
-            padding:16px;
-            width:220px;
-            text-align:center;
-            margin:10px;
-            display:inline-block;
+            background:#ffffff;color:#111;border-radius:12px;padding:16px;
+            width:220px;text-align:center;margin:10px;display:inline-block;
         }
-        .qrcode-wrap{
-            display:flex;
-            justify-content:center;
-            margin-bottom:12px;
-        }
-        .code-text{
-            font-family:monospace;
-            font-weight:bold;
-            font-size:14px;
-            word-break:break-all;
-        }
-        .card-grid{
-            display:flex;
-            flex-wrap:wrap;
-            gap:12px;
-            justify-content:flex-start;
-        }
+        .qrcode-wrap{display:flex;justify-content:center;margin-bottom:12px}
+        .code-text{font-family:monospace;font-weight:bold;font-size:14px;word-break:break-all}
+        .card-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start}
     </style>
 </head>
 <body>
@@ -105,13 +84,13 @@
         </div>
     </div>
 
-    <!-- 主菜单页面 -->
+    <!-- 主菜单 -->
     <div id="page-menu" class="hidden p-4 md:p-8">
         <div class="max-w-5xl mx-auto">
             <div class="glass-card mb-6">
                 <div class="flex justify-between items-center">
                     <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地卡管理系统</h1>
-                    <button id="logout-btn" class="px-4 py-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-sm transition">退出登录</button>
+                    <button id="logout-btn" class="px-4 py-2 bg-red-600/80 hover:bg-red-600 rounded text-sm transition">退出登录</button>
                 </div>
             </div>
             <div class="menu-grid">
@@ -139,7 +118,7 @@
         </div>
     </div>
 
-    <!-- 兑换码兑换页面 -->
+    <!-- 兑换码兑换页 -->
     <div id="page-redeem" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
@@ -152,38 +131,38 @@
         </div>
     </div>
 
-    <!-- 生成兑换码页面（二维码卡片） -->
+    <!-- 生成兑换码页 -->
     <div id="page-generate" class="hidden p-4 md:p-8">
         <div class="max-w-4xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">创建新兑换密钥</h3>
                 <div class="space-y-4 mb-4">
-                    <input id="reward-input" class="tech-input" placeholder="奖励内容（如：免扫地一次）">
+                    <input id="reward-input" class="tech-input" placeholder="奖励内容（例如：免扫地一次）">
                     <div class="flex gap-3">
                         <input id="count-input" type="number" value="1" min="1" max="10" class="tech-input w-24">
                         <button id="gen-btn" class="tech-btn flex-1"><i class="fa fa-magic"></i> 一键生成</button>
                     </div>
                 </div>
                 <div id="gen-tip" class="mb-4"></div>
-                <h4 class="font-semibold mb-2 text-sm text-slate-300">✅ 生成卡片（上方二维码，下方兑换码，可直接截图）</h4>
+                <h4 class="font-semibold mb-2 text-sm text-slate-300">✅ 生成卡片（上方二维码，下方兑换码，可直接截图保存）</h4>
                 <div id="card-list" class="card-grid"></div>
             </div>
         </div>
     </div>
 
-    <!-- 兑换记录页面 -->
+    <!-- 兑换记录 -->
     <div id="page-record" class="hidden p-4 md:p-8">
         <div class="max-w-4xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">兑换记录</h3>
-                <div id="record-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+                <div id="record-list" class="bg-slate-900/60 rounded-lg max-h-72 overflow-y-auto"></div>
             </div>
         </div>
     </div>
 
-    <!-- 免扫地人员表页面 -->
+    <!-- 免扫地人员表 -->
     <div id="page-clean" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
@@ -193,12 +172,12 @@
                     <input id="name-input" class="tech-input flex-1" placeholder="输入人员姓名">
                     <button id="add-name-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
                 </div>
-                <div id="name-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+                <div id="name-list" class="bg-slate-900/60 rounded-lg max-h-72 overflow-y-auto"></div>
             </div>
         </div>
     </div>
 
-    <!-- 扫码兑换页面 -->
+    <!-- 扫码兑换 -->
     <div id="page-scan" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
@@ -211,7 +190,7 @@
         </div>
     </div>
 
-    <!-- 把qrcodejs放到body底部，避免阻塞 -->
+    <!-- qrcodejs放在body底部 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
         const CONFIG = {
@@ -221,18 +200,22 @@
             CODE_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
             CODE_LEN: 12
         };
-        const sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
-        let html5QrCode = null;
-
-        async function sha256(text) {
-            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-            return Array.from(new Uint8Array(buf))
-                .map(b => b.toString(16).padStart(2, "0"))
-                .join("")
-                .toUpperCase();
+        // 初始化supabase，增加容错判断
+        let supabase;
+        try{
+            supabase = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
+        }catch(e){
+            console.error("supabase初始化失败",e);
+            alert("数据库库加载异常，请刷新页面Ctrl+F5");
         }
 
-        // 页面切换
+        let html5QrCode = null;
+
+        async function sha256(text){
+            const buf = await crypto.subtle.digest("SHA‑256", new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+        }
+
         const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-scan"];
         function showPage(pageId){
             allPages.forEach(p=>document.getElementById(p).classList.add("hidden"));
@@ -241,12 +224,12 @@
                 html5QrCode.stop().catch(()=>{});
                 html5QrCode = null;
             }
-            if(pageId === "generate"){
-                document.getElementById("card-list").innerHTML = "";
-            }
+            if(pageId === "page-generate") document.getElementById("card-list").innerHTML = "";
+            if(pageId === "page-record") refreshRecordList();
+            if(pageId === "page-clean") refreshNameList();
         }
 
-        // 登录
+        //登录
         const pwdInput = document.getElementById("pwd-input");
         const loginBtn = document.getElementById("login-btn");
         const loginTip = document.getElementById("login-tip");
@@ -259,218 +242,217 @@
             }else{
                 loginTip.classList.remove("hidden");
             }
-        };
-        pwdInput.onkeydown = e=>{if(e.key==="Enter")loginBtn.click()};
+        }
+        pwdInput.onkeydown = e=>{if(e.key==="Enter") loginBtn.click()};
         logoutBtn.onclick = ()=>{
             showPage("page-login");
-            pwdInput.value="";
+            pwdInput.value = "";
             loginTip.classList.add("hidden");
         };
 
-        // 菜单跳转
+        //菜单跳转
         document.querySelectorAll("[data-goto]").forEach(el=>{
             el.onclick = ()=>{
-                const target = el.dataset.goto;
-                showPage(`page-${target}`);
-                if(target === "record") refreshRecordList();
-                if(target === "clean") refreshNameList();
-                if(target === "scan") startScan();
+                const t = el.dataset.goto;
+                showPage(`page-${t}`);
             }
         });
-        // 返回按钮
         document.querySelectorAll("[data-back]").forEach(el=>{
             el.onclick = ()=>{
-                showPage(`page-${el.dataset.back}`);
+                const t = el.dataset.back;
+                showPage(`page-${t}`);
             }
         });
 
-        // 生成兑换码
-        function randomCode() {
-            let code = "";
-            for (let i = 0; i < CONFIG.CODE_LEN; i++) {
-                if (i > 0 && i % 4 === 0) code += "-";
-                code += CONFIG.CODE_POOL[Math.floor(Math.random() * CONFIG.CODE_POOL.length)];
+        //生成兑换码
+        function randomCode(){
+            let s = "";
+            for(let i=0;i<CONFIG.CODE_LEN;i++){
+                if(i>0 && i%4===0) s+="-";
+                s += CONFIG.CODE_POOL[Math.floor(Math.random()*CONFIG.CODE_POOL.length)];
             }
-            return code;
+            return s;
         }
         const rewardInput = document.getElementById("reward-input");
         const countInput = document.getElementById("count-input");
         const genBtn = document.getElementById("gen-btn");
         const genTip = document.getElementById("gen-tip");
         const cardList = document.getElementById("card-list");
-
-        genBtn.onclick = async () => {
+        genBtn.onclick = async ()=>{
             const reward = rewardInput.value.trim();
-            const count = parseInt(countInput.value) || 1;
-            if (!reward) { genTip.innerHTML = `<div class="tip-err">请填写奖励内容</div>`; return; }
-            const insertData = [];
-            const newCodeList = [];
-            for (let i = 0; i < count; i++) {
-                const code = randomCode();
-                insertData.push({ code: code, reward: reward, used: false });
-                newCodeList.push(code);
+            const cnt = parseInt(countInput.value)||1;
+            if(!reward){genTip.innerHTML="<div class='tip-err'>请填写奖励内容</div>";return;}
+            const insertArr = [];
+            const codeList = [];
+            for(let i=0;i<cnt;i++){
+                const c = randomCode();
+                insertArr.push({code:c,reward:reward,used:false});
+                codeList.push(c);
             }
-            const { error } = await sb.from("codes").insert(insertData);
-            if (error) { genTip.innerHTML = `<div class="tip-err">生成失败：${error.message}</div>`; return; }
-            genTip.innerHTML = `<div class="tip-ok">✅ 成功生成 ${count} 个兑换密钥</div>`;
+            const {error} = await supabase.from("codes").insert(insertArr);
+            if(error){
+                genTip.innerHTML = `<div class='tip-err'>生成失败：${error.message}</div>`;
+                return;
+            }
+            genTip.innerHTML = `<div class='tip-ok'>✅成功生成 ${cnt} 条兑换码</div>`;
             rewardInput.value = "";
-            newCodeList.forEach(code=>{
-                const cardDiv = document.createElement("div");
-                cardDiv.className = "code-card";
-                const id = "qr-" + code.replace(/-/g,'');
-                cardDiv.innerHTML = `
-                    <div class="qrcode-wrap" id="${id}"></div>
-                    <div class="code-text">${code}</div>
-                `;
-                cardList.appendChild(cardDiv);
-                new QRCode(document.getElementById(id), {
-                    text: code,
-                    width:140,
-                    height:140
-                });
+            codeList.forEach(code=>{
+                const div = document.createElement("div");
+                div.className = "code-card";
+                const qid = "qr-"+code.replace(/-/g,"");
+                div.innerHTML = `<div class="qrcode-wrap" id="${qid}"></div><div class="code-text">${code}</div>`;
+                cardList.appendChild(div);
+                new QRCode(document.getElementById(qid),{text:code,width:140,height:140});
             })
         };
 
-        // 兑换逻辑
+        //兑换逻辑
         async function doRedeem(codeStr){
             const code = codeStr.trim().toUpperCase();
-            if (!code) return {ok:false,msg:"请输入兑换密钥"};
-            const { data, error } = await sb.from("codes").select("*").eq("code", code).single();
-            if (error || !data) return {ok:false,msg:"❌ 无效的兑换密钥"};
-            if (data.used) return {ok:false,msg:"⚠️ 该密钥已被使用"};
+            if(!code) return {ok:false,msg:"请输入兑换码"};
+            const {data,error} = await supabase.from("codes").select("*").eq("code",code).single();
+            if(error || !data) return {ok:false,msg:"❌无效兑换码"};
+            if(data.used) return {ok:false,msg:"⚠️该兑换码已被使用"};
             const now = new Date().toLocaleString();
-            await sb.from("codes").update({ used: true, use_time: now }).eq("id", data.id);
-            return {ok:true,msg:`🎉 兑换成功！奖励：${data.reward}`};
+            const {error:upErr} = await supabase.from("codes").update({used:true,use_time:now}).eq("code",code);
+            if(upErr) return {ok:false,msg:"兑换失败："+upErr.message};
+            return {ok:true,msg:`🎉兑换成功！奖励：${data.reward}`};
         }
 
-        // 手动兑换
+        //手动兑换
         const redeemInput = document.getElementById("redeem-input");
         const redeemBtn = document.getElementById("redeem-btn");
         const redeemTip = document.getElementById("redeem-tip");
         redeemBtn.onclick = async ()=>{
             const res = await doRedeem(redeemInput.value);
-            redeemTip.innerHTML = `<div class="${res.ok?"tip-ok":"tip-err"}">${res.msg}</div>`;
+            redeemTip.innerHTML = `<div class='${res.ok?"tip-ok":"tip-err"}'>${res.msg}</div>`;
             if(res.ok) redeemInput.value="";
-        };
+        }
 
-        // 兑换记录
+        //记录列表
         const recordList = document.getElementById("record-list");
         async function refreshRecordList(){
-            const {data,error} = await sb.from("codes").select("*").eq("used",true).order("use_time",{ascending:false});
-            recordList.innerHTML="";
-            if(error){recordList.innerHTML=`<div class="p-3 text-red-400">读取失败：${error.message}</div>`;return;}
-            if(data.length===0){recordList.innerHTML=`<div class="p-3 text-slate-500 text-center">暂无兑换记录</div>`;return;}
+            const {data,error} = await supabase.from("codes").select("*").eq("used",true).order("use_time",{ascending:false});
+            recordList.innerHTML = "";
+            if(error){recordList.innerHTML="<div class='p-3 text-red-400'>读取记录失败</div>";return;}
+            if(!data||data.length===0){recordList.innerHTML="<div class='p-3 text-slate-400 text-center'>暂无兑换记录</div>";return;}
             data.forEach(item=>{
                 const row = document.createElement("div");
-                row.className="list-row";
-                row.innerHTML=`
-                <div>
-                    <div class="font-mono">${item.code}</div>
-                    <div class="text-xs text-slate-400">奖励：${item.reward}</div>
-                </div>
-                <div class="text-xs text-slate-300">${item.use_time||"未知时间"}</div>
-                `;
+                row.className = "list-row";
+                row.innerHTML = `<div><div class="font-mono">${item.code}</div><div class="text-xs text-slate-400">${item.reward}</div></div><div class="text-xs text-slate-300">${item.use_time||""}</div>`;
                 recordList.appendChild(row);
             })
         }
 
-        // 免扫地人员
+        //人员表
         const nameInput = document.getElementById("name-input");
         const addNameBtn = document.getElementById("add-name-btn");
         const nameList = document.getElementById("name-list");
-        async function refreshNameList() {
-            const { data, error } = await sb.from("clean").select("*").order("id", { ascending: false });
+        async function refreshNameList(){
+            const {data,error} = await supabase.from("clean").select("*").order("id",{ascending:false});
             nameList.innerHTML = "";
-            if (error) { nameList.innerHTML = `<div class="p-3 text-red-400">读取失败：${error.message}</div>`; return; }
-            if (data.length === 0) { nameList.innerHTML = `<div class="p-3 text-slate-500 text-center">暂无人员</div>`; return; }
-            data.forEach(item => {
+            if(error){nameList.innerHTML="<div class='p-3 text-red-400'>读取人员失败</div>";return;}
+            if(!data||data.length===0){nameList.innerHTML="<div class='p-3 text-slate-400 text-center'>暂无人员</div>";return;}
+            data.forEach(item=>{
                 const row = document.createElement("div");
                 row.className = "list-row";
                 row.innerHTML = `<span>${item.name}</span><span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>`;
                 nameList.appendChild(row);
             });
-            document.querySelectorAll(".del-btn").forEach(btn => {
-                btn.onclick = async () => {
-                    await sb.from("clean").delete().eq("id", btn.dataset.id);
+            document.querySelectorAll(".del-btn").forEach(b=>{
+                b.onclick = async ()=>{
+                    const id = b.dataset.id;
+                    await supabase.from("clean").delete().eq("id",id);
                     refreshNameList();
-                };
-            });
+                }
+            })
         }
-        addNameBtn.onclick = async () => {
-            const name = nameInput.value.trim();
-            if (!name) return;
-            const { error } = await sb.from("clean").insert({ name });
-            if (error) { alert("添加失败，姓名不能重复"); return; }
+        addNameBtn.onclick = async ()=>{
+            const n = nameInput.value.trim();
+            if(!n) return;
+            const {error} = await supabase.from("clean").insert({name:n});
+            if(error){alert("添加失败，姓名不能重复");return;}
             nameInput.value = "";
             refreshNameList();
-        };
+        }
 
-        // 扫码模块
+        //扫码兑换
         const scanTip = document.getElementById("scan-tip");
         const scanStopBtn = document.getElementById("scan-stop-btn");
         async function startScan(){
             scanTip.innerHTML="";
             scanStopBtn.classList.remove("hidden");
-            const qrCodeElement = document.getElementById("reader");
             html5QrCode = new Html5Qrcode("reader");
-            const config = {fps:10,qrbox:250};
-            html5QrCode.start(
+            await html5QrCode.start(
                 {facingMode:"environment"},
-                config,
+                {fps:10,qrbox:250},
                 async (decodedText)=>{
                     const res = await doRedeem(decodedText);
-                    scanTip.innerHTML = `<div class="${res.ok?"tip-ok":"tip-err"}">${res.msg}</div>`;
-                    html5QrCode.stop().then(()=>{
-                        html5QrCode=null;
-                        scanStopBtn.classList.add("hidden");
-                    });
+                    scanTip.innerHTML = `<div class='${res.ok?"tip-ok":"tip-err"}'>${res.msg}</div>`;
+                    await html5QrCode.stop();
+                    html5QrCode = null;
+                    scanStopBtn.classList.add("hidden");
                 },
                 ()=>{}
             ).catch(err=>{
-                scanTip.innerHTML=`<div class="tip-err">摄像头启动失败：${err}</div>`;
+                scanTip.innerHTML = `<div class="tip-err">摄像头启动失败：${err}</div>`;
             })
         }
-        scanStopBtn.onclick = ()=>{
+        scanStopBtn.onclick = async ()=>{
             if(html5QrCode){
-                html5QrCode.stop().then(()=>{
-                    html5QrCode=null;
-                    scanStopBtn.classList.add("hidden");
-                })
+                await html5QrCode.stop();
+                html5QrCode = null;
             }
-        };
+            scanStopBtn.classList.add("hidden");
+        }
 
-        // 粒子背景
-        (function () {
+        //页面切换钩子，进入扫码页自动启动摄像头
+        const origShowPage = showPage;
+        showPage = function(pid){
+            origShowPage(pid);
+            if(pid === "page-scan"){
+                startScan();
+            }
+        }
+
+        //粒子背景
+        (function(){
             const canvas = document.getElementById("particle-canvas");
             const ctx = canvas.getContext("2d");
-            let w, h;
+            let w,h;
             const particles = [];
-            const COUNT = 80;
-            function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+            const count = 80;
+            function resize(){
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
             resize();
-            window.addEventListener("resize", resize);
-            class Particle {
-                constructor() { this.reset(); }
-                reset() {
-                    this.x = Math.random() * w; this.y = Math.random() * h;
-                    this.vx = (Math.random()-0.5)*0.4; this.vy = (Math.random()-0.5)*0.4;
+            window.addEventListener("resize",resize);
+            class Particle{
+                constructor(){
+                    this.x = Math.random()*w;
+                    this.y = Math.random()*h;
+                    this.vx = (Math.random()-0.5)*0.4;
+                    this.vy = (Math.random()-0.5)*0.4;
                     this.r = Math.random()*1.5+0.3;
                 }
-                update() {
-                    this.x += this.vx; this.y += this.vy;
-                    if (this.x<0||this.x>w||this.y<0||this.y>h) this.reset();
+                update(){
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if(this.x<0||this.x>w) this.vx *= -1;
+                    if(this.y<0||this.y>h) this.vy *= -1;
                 }
-                draw() {
+                draw(){
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
-                    ctx.fillStyle = "rgba(129,140,248,0.5)";
+                    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+                    ctx.fillStyle="rgba(129,140,248,0.5)";
                     ctx.fill();
                 }
             }
-            for (let i=0;i<COUNT;i++) particles.push(new Particle());
-            function loop() {
+            for(let i=0;i<count;i++) particles.push(new Particle());
+            function loop(){
                 ctx.clearRect(0,0,w,h);
-                particles.forEach(p => { p.update(); p.draw(); });
+                particles.forEach(p=>{p.update();p.draw()});
                 requestAnimationFrame(loop);
             }
             loop();
