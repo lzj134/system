@@ -3,357 +3,478 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>云端卫生管理系统</title>
-    <!-- 外部依赖 -->
+    <title>免扫地卡管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",system-ui,monospace}
-        body{
-            background:#050816;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(18, 110, 255,0.12) 0%,transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(124, 58, 237,0.1) 0%,transparent 40%);
-            min-height:100vh;
-            color:#e2e8f0;
-            overflow-x:hidden;
+        * {margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",system-ui,sans-serif}
+        body {
+            background:#0f172a;
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(59,130,246,0.15) 0%,transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139,92,246,0.12) 0%,transparent 45%);
+            min-height:100vh;color:#e2e8f0;overflow-x:hidden;
         }
-        /* 粒子背景 */
-        #particle-bg{
-            position:fixed;
-            top:0;left:0;
-            width:100%;height:100%;
-            z-index:-1;
-            opacity:0.35;
-        }
+        #particle-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.35}
         .glass-card{
-            background:rgba(15,23,42,0.65);
-            backdrop-filter: blur(12px);
-            border:1px solid rgba(99, 102, 241,0.25);
-            box-shadow:0 0 24px rgba(79,70,229,0.2);
-            border-radius:18px;
-            padding:28px;
-            transition:all 0.3s ease;
+            position:relative;z-index:1;background:rgba(15,23,42,0.75);backdrop-filter:blur(16px);
+            border:1px solid rgba(99,102,241,0.25);box-shadow:0 0 30px rgba(79,70,229,0.15);
+            border-radius:18px;padding:28px;transition:all 0.3s ease;
         }
-        .glass-card:hover{
-            border-color:rgba(99, 102, 241,0.45);
-            box-shadow:0 0 32px rgba(79,70,229,0.35);
+        .glass-card:hover{border-color:rgba(129,140,248,0.45);box-shadow:0 0 40px rgba(79,70,229,0.25)}
+        .neon-title{text-shadow:0 0 8px #6366f1,0 0 16px #818cf8;letter-spacing:1px}
+        .tech-input{
+            width:100%;padding:14px 16px;background:rgba(30,41,59,0.8);
+            border:1px solid rgba(99,102,241,0.3);border-radius:12px;color:#f1f5f9;
+            font-size:15px;outline:none;transition:all 0.25s;
         }
-        .neon-text{
-            text-shadow:0 0 8px #6366f1,0 0 16px #818cf8;
+        .tech-input:focus{border-color:#818cf8;box-shadow:0 0 0 3px rgba(129,140,248,0.2)}
+        .tech-btn{
+            width:100%;padding:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+            color:#fff;border:none;border-radius:12px;font-weight:600;cursor:pointer;
+            transition:all 0.3s;box-shadow:0 4px 15px rgba(79,70,229,0.3);
         }
-        .input-tech{
-            width:100%;
-            padding:14px 16px;
-            background:rgba(30,41,59,0.7);
-            border:1px solid rgba(99,102,241,0.3);
-            border-radius:12px;
-            color:#f1f5f9;
-            font-size:15px;
-            transition:0.25s;
-            outline:none;
+        .tech-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(79,70,229,0.45)}
+        .tech-btn-secondary{
+            background:linear-gradient(135deg,#334155,#475569);
         }
-        .input-tech:focus{
-            border-color:#818cf8;
-            box-shadow:0 0 0 3px rgba(129,140,248,0.2);
+        .menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+        .menu-item{
+            padding:24px 16px;border-radius:14px;background:rgba(30,41,59,0.6);
+            border:1px solid rgba(99,102,241,0.2);text-align:center;cursor:pointer;
+            transition:all 0.25s;
         }
-        .btn-tech{
-            width:100%;
-            padding:14px;
-            background:linear-gradient(135deg,#4f46e5,#7c3aed);
-            color:#fff;
-            border:none;
-            border-radius:12px;
-            font-weight:600;
-            cursor:pointer;
-            transition:0.3s;
-            box-shadow:0 4px 12px rgba(79,70,229,0.3);
-        }
-        .btn-tech:hover{
-            transform:translateY(-2px);
-            box-shadow:0 6px 18px rgba(79,70,229,0.45);
-        }
-        .btn-tech:active{transform:translateY(0)}
-        .tab-item{
-            padding:12px 16px;
-            border-radius:10px;
-            background:rgba(30,41,59,0.5);
-            border:1px solid rgba(99,102,241,0.2);
-            cursor:pointer;
-            transition:0.25s;
-        }
-        .tab-item.active{
-            background:linear-gradient(135deg,#4f46e5,#7c3aed);
-            color:white;
-            border-color:#818cf8;
-        }
-        .panel{display:none;}
-        .panel.active{display:block;}
-        .list-item{
-            padding:10px 12px;
-            border-bottom:1px solid rgba(99,102,241,0.15);
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        }
-        .status-green{color:#34d399;text-shadow:0 0 4px #34d399}
-        .status-red{color:#f87171;text-shadow:0 0 4px #f87171}
-        .tip-success{color:#34d399;text-align:center;padding:10px}
-        .tip-error{color:#f87171;text-align:center;padding:10px}
-        .del-btn{
-            color:#f87171;
-            cursor:pointer;
-            padding:4px 8px;
-            border-radius:6px;
-            transition:0.2s;
-        }
+        .menu-item:hover{background:rgba(49,57,83,0.7);border-color:#818cf8;transform:translateY(-3px)}
+        .menu-item i{font-size:28px;margin-bottom:8px;color:#818cf8}
+        .list-row{padding:12px;border-bottom:1px solid rgba(99,102,241,0.15);display:flex;justify-content:space-between;align-items:center}
+        .status-ok{color:#34d399;text-shadow:0 0 4px rgba(52,211,153,0.5)}
+        .status-used{color:#f87171;text-shadow:0 0 4px rgba(248,113,113,0.5)}
+        .del-btn{color:#f87171;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:13px;transition:background 0.2s}
         .del-btn:hover{background:rgba(248,113,113,0.15)}
-        .hidden{display:none !important;}
+        .tip-ok{color:#34d399;text-align:center;padding:10px}
+        .tip-err{color:#f87171;text-align:center;padding:10px}
+        .hidden{display:none !important}
+        .back-btn{margin-bottom:16px;display:inline-block;padding:8px 16px;background:#334155;border-radius:8px;cursor:pointer}
+        #reader{width:100%;max-width:400px;margin:0 auto}
+        /* 兑换码卡片样式：上二维码，下兑换码 */
+        .code-card{
+            background:#ffffff;
+            color:#111;
+            border-radius:12px;
+            padding:16px;
+            width:220px;
+            text-align:center;
+            margin:10px;
+            display:inline-block;
+        }
+        .qrcode-wrap{
+            display:flex;
+            justify-content:center;
+            margin-bottom:12px;
+        }
+        .code-text{
+            font-family:monospace;
+            font-weight:bold;
+            font-size:14px;
+            word-break:break-all;
+        }
+        .card-grid{
+            display:flex;
+            flex-wrap:wrap;
+            gap:12px;
+            justify-content:flex-start;
+        }
     </style>
 </head>
 <body>
-    <canvas id="particle-bg"></canvas>
+    <canvas id="particle-canvas"></canvas>
 
-    <div class="max-w-xl mx-auto px-4 py-10">
-        <!-- 登录页面 -->
-        <div id="login-page" class="glass-card">
-            <h2 class="text-2xl font-bold text-center neon-text mb-8">🔐 云端管理系统登录</h2>
-            <input type="password" id="login-password" class="input-tech mb-5" placeholder="请输入管理员密钥">
-            <button id="login-btn" class="btn-tech"><i class="fa fa-sign-in"></i> 身份验证</button>
+    <!-- 登录页面 -->
+    <div id="page-login" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-3">🔐</div>
+                <h2 class="text-2xl font-bold neon-title">云端管理系统</h2>
+                <p class="text-sm text-slate-400 mt-2">请输入访问密码验证身份</p>
+            </div>
+            <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密码">
+            <button id="login-btn" class="tech-btn"><i class="fa fa-shield"></i> 身份验证</button>
+            <div id="login-tip" class="tip-err mt-3 hidden">密码错误，请重试</div>
         </div>
+    </div>
 
-        <!-- 主业务界面 -->
-        <div id="main-page" class="hidden">
-            <div class="flex gap-3 mb-6">
-                <div class="tab-item flex-1 text-center" data-tab="redeem"><i class="fa fa-gift"></i> 兑换校验</div>
-                <div class="tab-item flex-1 text-center" data-tab="generate"><i class="fa fa-key"></i> 生成密钥</div>
-                <div class="tab-item flex-1 text-center" data-tab="clean"><i class="fa fa-users"></i> 免扫地名单</div>
-            </div>
-
-            <!-- 兑换面板 -->
-            <div class="panel active" data-panel="redeem">
-                <div class="glass-card">
-                    <h3 class="text-xl font-bold neon-text mb-5"><i class="fa fa-exchange"></i> 兑换码核验</h3>
-                    <input id="redeem-input" class="input-tech mb-4" placeholder="输入兑换密钥">
-                    <button id="redeem-submit" class="btn-tech"><i class="fa fa-check-circle"></i> 执行兑换</button>
-                    <div id="redeem-tip" class="mt-4"></div>
+    <!-- 主菜单页面 -->
+    <div id="page-menu" class="hidden p-4 md:p-8">
+        <div class="max-w-5xl mx-auto">
+            <div class="glass-card mb-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地卡管理系统</h1>
+                    <button id="logout-btn" class="px-4 py-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-sm transition">退出登录</button>
                 </div>
             </div>
-
-            <!-- 生成兑换码面板 -->
-            <div class="panel" data-panel="generate">
-                <div class="glass-card">
-                    <h3 class="text-xl font-bold neon-text mb-5"><i class="fa fa-random"></i> 创建新兑换密钥</h3>
-                    <div class="flex gap-3 mb-4">
-                        <input id="reward-input" class="input-tech flex-1" placeholder="奖励内容">
-                        <button id="gen-btn" class="btn-tech w-auto px-6"><i class="fa fa-plus"></i> 生成</button>
-                    </div>
-                    <div id="gen-tip" class="mb-4"></div>
-                    <h4 class="font-semibold mb-3">密钥列表</h4>
-                    <div id="code-list" class="bg-slate-900/50 rounded-xl max-h-64 overflow-y-auto p-2"></div>
+            <div class="menu-grid">
+                <div class="menu-item" data-goto="redeem">
+                    <i class="fa fa-gift"></i>
+                    <div>兑换码兑换</div>
                 </div>
-            </div>
-
-            <!-- 免扫地人员面板 -->
-            <div class="panel" data-panel="clean">
-                <div class="glass-card">
-                    <h3 class="text-xl font-bold neon-text mb-5"><i class="fa fa-user-circle"></i> 免扫地人员管理</h3>
-                    <div class="flex gap-3 mb-4">
-                        <input id="clean-name-input" class="input-tech flex-1" placeholder="输入人员姓名">
-                        <button id="clean-add-btn" class="btn-tech w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
-                    </div>
-                    <div id="clean-list" class="bg-slate-900/50 rounded-xl max-h-64 overflow-y-auto p-2"></div>
+                <div class="menu-item" data-goto="generate">
+                    <i class="fa fa-key"></i>
+                    <div>生成兑换码</div>
+                </div>
+                <div class="menu-item" data-goto="record">
+                    <i class="fa fa-history"></i>
+                    <div>兑换记录</div>
+                </div>
+                <div class="menu-item" data-goto="clean">
+                    <i class="fa fa-users"></i>
+                    <div>免扫地人员表</div>
+                </div>
+                <div class="menu-item" data-goto="scan">
+                    <i class="fa fa-qrcode"></i>
+                    <div>扫码兑换</div>
                 </div>
             </div>
         </div>
     </div>
 
-<script>
-// ========== 配置（对接Supabase云端，不要修改） ==========
-const CONFIG = {
-    AUTH_PASSWORD_HASH: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",
-    SUPABASE_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
-    SUPABASE_ANON_KEY: "sb_publishable_kav7LpNfWNP0bWnbQfTtw_NioPGsux",
-    CODE_CHAR_POOL: "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789",
-    CODE_RAW_LEN:12
-};
+    <!-- 兑换码兑换页面 -->
+    <div id="page-redeem" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">兑换码核验</h3>
+                <input id="redeem-input" class="tech-input mb-4" placeholder="请输入兑换密钥">
+                <button id="redeem-btn" class="tech-btn"><i class="fa fa-check-circle"></i> 立即兑换</button>
+                <div id="redeem-tip" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
 
-// 初始化supabase客户端【只声明一次】
-const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    <!-- 生成兑换码页面（二维码卡片） -->
+    <div id="page-generate" class="hidden p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">创建新兑换密钥</h3>
+                <div class="space-y-4 mb-4">
+                    <input id="reward-input" class="tech-input" placeholder="奖励内容（如：免扫地一次）">
+                    <div class="flex gap-3">
+                        <input id="count-input" type="number" value="1" min="1" max="10" class="tech-input w-24">
+                        <button id="gen-btn" class="tech-btn flex-1"><i class="fa fa-magic"></i> 一键生成</button>
+                    </div>
+                </div>
+                <div id="gen-tip" class="mb-4"></div>
+                <h4 class="font-semibold mb-2 text-sm text-slate-300">✅ 生成卡片（上方二维码，下方兑换码，可直接截图）</h4>
+                <div id="card-list" class="card-grid"></div>
+            </div>
+        </div>
+    </div>
 
-// 粒子背景动画（科技效果）
-(function particleEffect(){
-    const canvas = document.getElementById("particle-bg");
-    const ctx = canvas.getContext("2d");
-    let w,h,particles=[];
-    function resize(){
-        w=canvas.width=window.innerWidth;
-        h=canvas.height=window.innerHeight;
-    }
-    resize();
-    window.addEventListener("resize",resize);
-    class Particle{
-        constructor(){
-            this.x=Math.random()*w;
-            this.y=Math.random()*h;
-            this.vx=(Math.random()-0.5)*0.3;
-            this.vy=(Math.random()-0.5)*0.3;
-            this.r=Math.random()*1.2+0.3;
+    <!-- 兑换记录页面 -->
+    <div id="page-record" class="hidden p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">兑换记录</h3>
+                <div id="record-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 免扫地人员表页面 -->
+    <div id="page-clean" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">免扫地人员管理</h3>
+                <div class="flex gap-3 mb-4">
+                    <input id="name-input" class="tech-input flex-1" placeholder="输入人员姓名">
+                    <button id="add-name-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
+                </div>
+                <div id="name-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 扫码兑换页面 -->
+    <div id="page-scan" class="hidden p-4 md:p-8">
+        <div class="max-w-3xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title">扫码兑换</h3>
+                <div id="reader"></div>
+                <div id="scan-tip" class="mt-4"></div>
+                <button id="scan-stop-btn" class="tech-btn tech-btn-secondary mt-4 hidden">停止摄像头</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 把qrcodejs放到body底部，避免阻塞 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        const CONFIG = {
+            AUTH_HASH: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",
+            SUPA_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
+            SUPA_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTtw_NioPGsux",
+            CODE_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+            CODE_LEN: 12
+        };
+        const sb = window.supabase.createClient(CONFIG.SUPA_URL, CONFIG.SUPA_KEY);
+        let html5QrCode = null;
+
+        async function sha256(text) {
+            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buf))
+                .map(b => b.toString(16).padStart(2, "0"))
+                .join("")
+                .toUpperCase();
         }
-        update(){
-            this.x+=this.vx;
-            this.y+=this.vy;
-            if(this.x<0||this.x>w)this.vx*=-1;
-            if(this.y<0||this.y>h)this.vy*=-1;
+
+        // 页面切换
+        const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-scan"];
+        function showPage(pageId){
+            allPages.forEach(p=>document.getElementById(p).classList.add("hidden"));
+            document.getElementById(pageId).classList.remove("hidden");
+            if(pageId !== "page-scan" && html5QrCode){
+                html5QrCode.stop().catch(()=>{});
+                html5QrCode = null;
+            }
+            if(pageId === "generate"){
+                document.getElementById("card-list").innerHTML = "";
+            }
         }
-        draw(){
-            ctx.beginPath();
-            ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-            ctx.fillStyle="rgba(129,140,248,0.4)";
-            ctx.fill();
+
+        // 登录
+        const pwdInput = document.getElementById("pwd-input");
+        const loginBtn = document.getElementById("login-btn");
+        const loginTip = document.getElementById("login-tip");
+        const logoutBtn = document.getElementById("logout-btn");
+        loginBtn.onclick = async ()=>{
+            const pwd = pwdInput.value.trim();
+            const hash = await sha256(pwd);
+            if(hash === CONFIG.AUTH_HASH){
+                showPage("page-menu");
+            }else{
+                loginTip.classList.remove("hidden");
+            }
+        };
+        pwdInput.onkeydown = e=>{if(e.key==="Enter")loginBtn.click()};
+        logoutBtn.onclick = ()=>{
+            showPage("page-login");
+            pwdInput.value="";
+            loginTip.classList.add("hidden");
+        };
+
+        // 菜单跳转
+        document.querySelectorAll("[data-goto]").forEach(el=>{
+            el.onclick = ()=>{
+                const target = el.dataset.goto;
+                showPage(`page-${target}`);
+                if(target === "record") refreshRecordList();
+                if(target === "clean") refreshNameList();
+                if(target === "scan") startScan();
+            }
+        });
+        // 返回按钮
+        document.querySelectorAll("[data-back]").forEach(el=>{
+            el.onclick = ()=>{
+                showPage(`page-${el.dataset.back}`);
+            }
+        });
+
+        // 生成兑换码
+        function randomCode() {
+            let code = "";
+            for (let i = 0; i < CONFIG.CODE_LEN; i++) {
+                if (i > 0 && i % 4 === 0) code += "-";
+                code += CONFIG.CODE_POOL[Math.floor(Math.random() * CONFIG.CODE_POOL.length)];
+            }
+            return code;
         }
-    }
-    for(let i=0;i<120;i++) particles.push(new Particle());
-    function loop(){
-        ctx.clearRect(0,0,w,h);
-        particles.forEach(p=>{p.update();p.draw()});
-        requestAnimationFrame(loop);
-    }
-    loop();
-})();
+        const rewardInput = document.getElementById("reward-input");
+        const countInput = document.getElementById("count-input");
+        const genBtn = document.getElementById("gen-btn");
+        const genTip = document.getElementById("gen-tip");
+        const cardList = document.getElementById("card-list");
 
-// SHA256密码校验
-async function sha256Encode(text){
-    const buf = await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
-}
+        genBtn.onclick = async () => {
+            const reward = rewardInput.value.trim();
+            const count = parseInt(countInput.value) || 1;
+            if (!reward) { genTip.innerHTML = `<div class="tip-err">请填写奖励内容</div>`; return; }
+            const insertData = [];
+            const newCodeList = [];
+            for (let i = 0; i < count; i++) {
+                const code = randomCode();
+                insertData.push({ code: code, reward: reward, used: false });
+                newCodeList.push(code);
+            }
+            const { error } = await sb.from("codes").insert(insertData);
+            if (error) { genTip.innerHTML = `<div class="tip-err">生成失败：${error.message}</div>`; return; }
+            genTip.innerHTML = `<div class="tip-ok">✅ 成功生成 ${count} 个兑换密钥</div>`;
+            rewardInput.value = "";
+            newCodeList.forEach(code=>{
+                const cardDiv = document.createElement("div");
+                cardDiv.className = "code-card";
+                const id = "qr-" + code.replace(/-/g,'');
+                cardDiv.innerHTML = `
+                    <div class="qrcode-wrap" id="${id}"></div>
+                    <div class="code-text">${code}</div>
+                `;
+                cardList.appendChild(cardDiv);
+                new QRCode(document.getElementById(id), {
+                    text: code,
+                    width:140,
+                    height:140
+                });
+            })
+        };
 
-// 登录逻辑
-document.getElementById("login-btn").addEventListener("click",async ()=>{
-    const pwd = document.getElementById("login-password").value.trim();
-    const hash = await sha256Encode(pwd);
-    if(hash === CONFIG.AUTH_PASSWORD_HASH){
-        document.getElementById("login-page").classList.add("hidden");
-        document.getElementById("main-page").classList.remove("hidden");
-        loadCodeList();
-        loadCleanList();
-    }else{
-        alert("🔒 密钥验证失败，请重新输入");
-    }
-});
-
-// Tab切换
-document.querySelectorAll(".tab-item").forEach(tab=>{
-    tab.addEventListener("click",()=>{
-        const name = tab.dataset.tab;
-        document.querySelectorAll(".tab-item").forEach(t=>t.classList.remove("active"));
-        document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-        tab.classList.add("active");
-        document.querySelector(`[data-panel="${name}"]`).classList.add("active");
-    })
-})
-
-// ========== 兑换码业务（云端数据库） ==========
-async function loadCodeList(){
-    const {data,error} = await supabase.from("codes").select("*").order("id",{ascending:false});
-    const box = document.getElementById("code-list");
-    box.innerHTML="";
-    if(error){box.innerHTML="<div class='text-red-400 p-2'>云端读取异常</div>";return;}
-    data.forEach(item=>{
-        const div = document.createElement("div");
-        div.className="list-item";
-        div.innerHTML = `
-            <span>${item.code}</span>
-            <span class="${item.used?"status-red":"status-green"}">${item.used?"已使用":"未使用"}</span>
-        `;
-        box.appendChild(div);
-    })
-}
-
-//生成兑换码
-document.getElementById("gen-btn").addEventListener("click",async ()=>{
-    const reward = document.getElementById("reward-input").value.trim();
-    const tipDom = document.getElementById("gen-tip");
-    if(!reward){
-        tipDom.innerHTML="<div class='tip-error'>请填写奖励内容</div>";
-        return;
-    }
-    let code="";
-    const pool = CONFIG.CODE_CHAR_POOL;
-    for(let i=0;i<CONFIG.CODE_RAW_LEN;i++){
-        code += pool[Math.floor(Math.random()*pool.length)];
-    }
-    const {error} = await supabase.from("codes").insert({code,reward});
-    if(error){
-        tipDom.innerHTML=`<div class='tip-error'>生成失败：${error.message}</div>`;
-        return;
-    }
-    tipDom.innerHTML=`<div class='tip-success'>✅ 密钥生成成功：${code}</div>`;
-    document.getElementById("reward-input").value="";
-    loadCodeList();
-})
-
-//兑换执行
-document.getElementById("redeem-submit").addEventListener("click",async ()=>{
-    const code = document.getElementById("redeem-input").value.trim();
-    const tipDom = document.getElementById("redeem-tip");
-    if(!code){
-        tipDom.innerHTML="<div class='tip-error'>请输入兑换密钥</div>";
-        return;
-    }
-    const {data,error} = await supabase.from("codes").select("*").eq("code",code).single();
-    if(error||!data){
-        tipDom.innerHTML="<div class='tip-error'>❌ 兑换密钥不存在</div>";
-        return;
-    }
-    if(data.used){
-        tipDom.innerHTML="<div class='tip-error'>❌ 该密钥已经被使用</div>";
-        return;
-    }
-    const now = new Date().toLocaleString();
-    await supabase.from("codes").update({used:true,use_time:now}).eq("id",data.id);
-    tipDom.innerHTML=`<div class='tip-success'>🎉 兑换成功！奖励：${data.reward}</div>`;
-    document.getElementById("redeem-input").value="";
-    loadCodeList();
-})
-
-// ========== 免扫地人员业务 ==========
-async function loadCleanList(){
-    const {data,error} = await supabase.from("clean").select("*").order("id",{ascending:false});
-    const box = document.getElementById("clean-list");
-    box.innerHTML="";
-    if(error){box.innerHTML="<div class='text-red-400 p-2'>云端读取异常</div>";return;}
-    data.forEach(item=>{
-        const div = document.createElement("div");
-        div.className="list-item";
-        div.innerHTML = `
-            <span>${item.name}</span>
-            <span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>
-        `;
-        box.appendChild(div);
-    })
-    document.querySelectorAll(".del-btn").forEach(btn=>{
-        btn.onclick = async function(){
-            const id = this.dataset.id;
-            await supabase.from("clean").delete().eq("id",id);
-            loadCleanList();
+        // 兑换逻辑
+        async function doRedeem(codeStr){
+            const code = codeStr.trim().toUpperCase();
+            if (!code) return {ok:false,msg:"请输入兑换密钥"};
+            const { data, error } = await sb.from("codes").select("*").eq("code", code).single();
+            if (error || !data) return {ok:false,msg:"❌ 无效的兑换密钥"};
+            if (data.used) return {ok:false,msg:"⚠️ 该密钥已被使用"};
+            const now = new Date().toLocaleString();
+            await sb.from("codes").update({ used: true, use_time: now }).eq("id", data.id);
+            return {ok:true,msg:`🎉 兑换成功！奖励：${data.reward}`};
         }
-    })
-}
 
-document.getElementById("clean-add-btn").addEventListener("click",async ()=>{
-    const name = document.getElementById("clean-name-input").value.trim();
-    if(!name) return;
-    const {error} = await supabase.from("clean").insert({name});
-    if(error){
-        alert("⚠️ 添加失败，姓名不能重复");
-        return;
-    }
-    document.getElementById("clean-name-input").value="";
-    loadCleanList();
-})
+        // 手动兑换
+        const redeemInput = document.getElementById("redeem-input");
+        const redeemBtn = document.getElementById("redeem-btn");
+        const redeemTip = document.getElementById("redeem-tip");
+        redeemBtn.onclick = async ()=>{
+            const res = await doRedeem(redeemInput.value);
+            redeemTip.innerHTML = `<div class="${res.ok?"tip-ok":"tip-err"}">${res.msg}</div>`;
+            if(res.ok) redeemInput.value="";
+        };
 
-</script>
+        // 兑换记录
+        const recordList = document.getElementById("record-list");
+        async function refreshRecordList(){
+            const {data,error} = await sb.from("codes").select("*").eq("used",true).order("use_time",{ascending:false});
+            recordList.innerHTML="";
+            if(error){recordList.innerHTML=`<div class="p-3 text-red-400">读取失败：${error.message}</div>`;return;}
+            if(data.length===0){recordList.innerHTML=`<div class="p-3 text-slate-500 text-center">暂无兑换记录</div>`;return;}
+            data.forEach(item=>{
+                const row = document.createElement("div");
+                row.className="list-row";
+                row.innerHTML=`
+                <div>
+                    <div class="font-mono">${item.code}</div>
+                    <div class="text-xs text-slate-400">奖励：${item.reward}</div>
+                </div>
+                <div class="text-xs text-slate-300">${item.use_time||"未知时间"}</div>
+                `;
+                recordList.appendChild(row);
+            })
+        }
+
+        // 免扫地人员
+        const nameInput = document.getElementById("name-input");
+        const addNameBtn = document.getElementById("add-name-btn");
+        const nameList = document.getElementById("name-list");
+        async function refreshNameList() {
+            const { data, error } = await sb.from("clean").select("*").order("id", { ascending: false });
+            nameList.innerHTML = "";
+            if (error) { nameList.innerHTML = `<div class="p-3 text-red-400">读取失败：${error.message}</div>`; return; }
+            if (data.length === 0) { nameList.innerHTML = `<div class="p-3 text-slate-500 text-center">暂无人员</div>`; return; }
+            data.forEach(item => {
+                const row = document.createElement("div");
+                row.className = "list-row";
+                row.innerHTML = `<span>${item.name}</span><span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>`;
+                nameList.appendChild(row);
+            });
+            document.querySelectorAll(".del-btn").forEach(btn => {
+                btn.onclick = async () => {
+                    await sb.from("clean").delete().eq("id", btn.dataset.id);
+                    refreshNameList();
+                };
+            });
+        }
+        addNameBtn.onclick = async () => {
+            const name = nameInput.value.trim();
+            if (!name) return;
+            const { error } = await sb.from("clean").insert({ name });
+            if (error) { alert("添加失败，姓名不能重复"); return; }
+            nameInput.value = "";
+            refreshNameList();
+        };
+
+        // 扫码模块
+        const scanTip = document.getElementById("scan-tip");
+        const scanStopBtn = document.getElementById("scan-stop-btn");
+        async function startScan(){
+            scanTip.innerHTML="";
+            scanStopBtn.classList.remove("hidden");
+            const qrCodeElement = document.getElementById("reader");
+            html5QrCode = new Html5Qrcode("reader");
+            const config = {fps:10,qrbox:250};
+            html5QrCode.start(
+                {facingMode:"environment"},
+                config,
+                async (decodedText)=>{
+                    const res = await doRedeem(decodedText);
+                    scanTip.innerHTML = `<div class="${res.ok?"tip-ok":"tip-err"}">${res.msg}</div>`;
+                    html5QrCode.stop().then(()=>{
+                        html5QrCode=null;
+                        scanStopBtn.classList.add("hidden");
+                    });
+                },
+                ()=>{}
+            ).catch(err=>{
+                scanTip.innerHTML=`<div class="tip-err">摄像头启动失败：${err}</div>`;
+            })
+        }
+        scanStopBtn.onclick = ()=>{
+            if(html5QrCode){
+                html5QrCode.stop().then(()=>{
+                    html5QrCode=null;
+                    scanStopBtn.classList.add("hidden");
+                })
+            }
+        };
+
+        // 粒子背景
+        (function () {
+            const canvas = document.getElementById("particle-canvas");
+            const ctx = canvas.getContext("2d");
+            let w, h;
+            const particles = [];
+            const COUNT = 80;
+            function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+            resize();
+            window.addEventListener("resize", resize);
+            class Particle {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * w; this.y = Math.random() * h;
+                    this.vx = (Math.random()-0.5)*0.4; this.vy = (Math.random()-0.5)*0.4;
+                    this.r = Math.random()*1.5+0.3;
+                }
+                update() {
+                    this.x += this.vx; this.y += this.vy;
+                    if (this.x<0||this.x>w||this.y<0||this.y>h) this.reset();
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+                    ctx.fillStyle = "rgba(129,140,248,0.5)";
+                    ctx.fill();
+                }
+            }
+            for (let i=0;i<COUNT;i++) particles.push(new Particle());
+            function loop() {
+                ctx.clearRect(0,0,w,h);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+    </script>
 </body>
 </html>
