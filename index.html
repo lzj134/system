@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
     
-    <!-- 数据库库 完整UMD路径 绝对不会404 -->
+    <!-- 数据库库UMD路径 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
     
     <!-- 二维码相关库 -->
@@ -224,13 +224,13 @@
             <div class="text-center mb-8">
                 <div class="text-4xl mb-3">🔐</div>
                 <h2 class="text-2xl font-bold neon-title">云端管理系统</h2>
-                <p class="text-sm text-slate-400 mt-2" id="login-subtitle">请输入访问密码验证身份</p>
+                <p class="text-sm text-slate-400 mt-2" id="login-subtitle">管理密钥请联系管理员，班长或卫生委员廖志强</p>
             </div>
-            <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密码">
+            <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密钥">
             <button id="login-btn" class="tech-btn">
                 <i class="fa fa-shield"></i> 身份验证
             </button>
-            <div id="login-tip" class="tip-err mt-3 hidden">密码错误，请重试</div>
+            <div id="login-tip" class="tip-err mt-3 hidden">密钥错误，请重试</div>
         </div>
     </div>
 
@@ -240,7 +240,7 @@
             <div class="glass-card mb-6">
                 <div class="flex justify-between items-center">
                     <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地云管理系统</h1>
-                    <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出登录</button>
+                    <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出系统</button>
                 </div>
             </div>
             <div class="menu-grid">
@@ -275,7 +275,7 @@
     <!-- 兑换码兑换页 -->
     <div id="page-redeem" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
-            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">兑换码核验</h3>
                 <input id="redeem-input" class="tech-input mb-4" placeholder="请输入兑换密钥">
@@ -308,7 +308,7 @@
     <!-- 兑换记录页 -->
     <div id="page-record" class="hidden p-4 md:p-8">
         <div class="max-w-4xl mx-auto">
-            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">兑换记录</h3>
                 <div id="record-list" class="bg-slate-900/60 rounded-xl max-h-96 overflow-y-auto"></div>
@@ -319,7 +319,7 @@
     <!-- 免扫地人员页 -->
     <div id="page-clean" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
-            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">免扫地人员管理</h3>
                 <div class="flex gap-3 mb-4">
@@ -334,7 +334,7 @@
     <!-- 扫码兑换页 -->
     <div id="page-scan" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
-            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">扫码兑换</h3>
                 <div id="reader"></div>
@@ -348,7 +348,7 @@
     <!-- 生成信息管理页 -->
     <div id="page-genmanage" class="hidden p-4 md:p-8">
         <div class="max-w-4xl mx-auto">
-            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回菜单</div>
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">生成信息管理</h3>
 
@@ -396,7 +396,7 @@
 
             // ========== 配置 ==========
             const CONFIG = {
-                // 密码
+                // 密钥
                 AUTH_HASH: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",
                 SUPA_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
                 SUPA_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux",
@@ -414,8 +414,7 @@
             }
 
             // ========== 本页基础地址 & 二维码内容 ==========
-            // 二维码里放的是「本页面网址 + ?code=兑换码」
-            // 微信/相机扫码 → 打开本页面 → 登录 → 自动进入核销页并填入兑换码
+            // 二维码「本页面网址 + ?code=兑换码」
             const PAGE_BASE = location.href.split("#")[0].split("?")[0];
 
             function buildQrText(code) {
