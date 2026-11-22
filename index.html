@@ -231,6 +231,19 @@
             margin: 20px 0 10px;
             letter-spacing: 1px;
         }
+        /* ===== 管理员入口 & 角色标识 ===== */
+        .admin-gear { position: fixed; top: 16px; right: 16px; width: 46px; height: 46px;
+            display: flex; align-items: center; justify-content: center; border-radius: 50%;
+            background: rgba(30,41,59,0.8); border: 1px solid rgba(99,102,241,0.35);
+            color: #a5b4fc; font-size: 20px; cursor: pointer; z-index: 60; transition: all .25s; }
+        .admin-gear:hover { color: #fff; border-color: #818cf8; transform: rotate(45deg);
+            box-shadow: 0 0 18px rgba(129,140,248,0.45); }
+        .role-badge { font-size: 12px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+        .role-admin { background: rgba(129,140,248,0.18); color: #c7d2fe; border: 1px solid rgba(129,140,248,0.4); }
+        .role-normal { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.35); }
+        .modal-mask { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: rgba(2,6,23,0.75); backdrop-filter: blur(6px); z-index: 80; }
+        .modal-box { width: 100%; max-width: 360px; }
     </style>
 </head>
 <body>
@@ -240,7 +253,7 @@
             <div class="text-center mb-8">
                 <div class="text-4xl mb-3">🔐</div>
                 <h2 class="text-2xl font-bold neon-title">云扫地管理系统</h2>
-                <p class="text-sm text-slate-400 mt-2" id="login-subtitle">管理密钥请联系管理员，班长或卫生委员廖志强</p>
+                <p class="text-sm text-slate-400 mt-2" id="login-subtitle">普通同学请用普通密钥登录｜管理员请点右上角 ⚙ 齿轮</p>
             </div>
             <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密钥">
             <button id="login-btn" class="tech-btn">
@@ -250,13 +263,53 @@
         </div>
     </div>
 
+    <!-- 管理员入口（第一面右上角齿轮） -->
+    <div id="admin-gear" class="admin-gear" title="管理员入口"><i class="fa fa-cog"></i></div>
+
+    <!-- 管理员身份验证弹窗 -->
+    <div id="admin-mask" class="modal-mask hidden">
+        <div class="glass-card modal-box">
+            <div class="text-center mb-6">
+                <div class="text-3xl mb-2">⚙️</div>
+                <h3 class="text-lg font-bold neon-title">管理员身份验证</h3>
+                <p class="text-xs text-slate-400 mt-1">请输入管理员密钥</p>
+            </div>
+            <input type="password" id="admin-pwd" class="tech-input mb-4" placeholder="管理员密钥">
+            <button id="admin-login-btn" class="tech-btn"><i class="fa fa-unlock-alt"></i> 进入管理后台</button>
+            <button id="admin-cancel-btn" class="tech-btn mt-3" style="background:linear-gradient(135deg,#334155,#475569)">取消</button>
+            <div id="admin-tip" class="tip-err mt-3 hidden">管理员密钥错误，请重试</div>
+        </div>
+    </div>
+
+    <!-- 值日名单调整弹窗（管理员） -->
+    <div id="duty-edit-mask" class="modal-mask hidden">
+        <div class="glass-card" style="width:100%; max-width:520px; max-height:88vh; overflow-y:auto;">
+            <h3 class="text-lg font-bold neon-title mb-1"><i class="fa fa-pencil"></i> 调整值日名单</h3>
+            <div class="text-xs text-slate-400 mb-3" id="duty-edit-date">日期：</div>
+
+            <div class="divider-title" style="margin-top:0">① 从名单勾选（可多选、可取消）</div>
+            <div id="duty-edit-list" class="bg-slate-900/60 rounded-xl max-h-56 overflow-y-auto"></div>
+
+            <div class="divider-title">② 临时人员 / 罚扫地（不用加进名单，逗号分隔）</div>
+            <input id="duty-edit-extra" class="tech-input mb-1" placeholder="例如：张三、李四（罚扫地）">
+            <div class="text-xs text-slate-500 mb-3">勾选的人 + 临时人员会合并成当天名单，按这里的前后顺序保存。</div>
+
+            <div id="duty-edit-tip" class="mb-2"></div>
+            <button id="duty-edit-save" class="tech-btn mb-2"><i class="fa fa-save"></i> 保存当天名单</button>
+            <button id="duty-edit-cancel" class="tech-btn" style="background:linear-gradient(135deg,#334155,#475569)">取消</button>
+        </div>
+    </div>
+
     <!-- 主菜单 -->
     <div id="page-menu" class="hidden p-4 md:p-8">
         <div class="max-w-5xl mx-auto">
             <div class="glass-card mb-6">
-                <div class="flex justify-between items-center">
+                                <div class="flex justify-between items-center gap-3 flex-wrap">
                     <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地云管理系统</h1>
-                    <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出系统</button>
+                    <div class="flex items-center gap-3">
+                        <span id="role-badge" class="role-badge role-normal">普通用户</span>
+                        <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出系统</button>
+                    </div>
                 </div>
             </div>
             <div class="menu-grid">
@@ -264,7 +317,7 @@
                     <i class="fa fa-gift"></i>
                     <div>兑换 / 扫码兑换</div>
                 </div>
-                <div class="menu-item" data-goto="generate">
+                <div class="menu-item" data-admin-only data-goto="generate">
                     <i class="fa fa-key"></i>
                     <div>生成兑换码</div>
                 </div>
@@ -280,11 +333,11 @@
                     <i class="fa fa-calendar-check-o"></i>
                     <div>值日安排</div>
                 </div>
-                <div class="menu-item" data-goto="genmanage">
+                <div class="menu-item" data-admin-only data-goto="genmanage">
                     <i class="fa fa-database"></i>
                     <div>生成信息管理</div>
                 </div>
-                <div class="menu-item" data-goto="dbconfig">
+                <div class="menu-item" data-admin-only data-goto="dbconfig">
                     <i class="fa fa-cog"></i>
                     <div>数据库配置</div>
                 </div>
@@ -353,7 +406,7 @@
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title">免扫地人员管理</h3>
-                <div class="flex gap-3 mb-4">
+                                <div id="clean-add-row" data-admin-only class="flex gap-3 mb-4">
                     <input id="name-input" class="tech-input flex-1" placeholder="输入人员姓名">
                     <button id="add-name-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
                 </div>
@@ -371,8 +424,9 @@
             <div class="glass-card mb-6">
                 <div class="flex justify-between items-center flex-wrap gap-3">
                     <h3 class="text-lg font-semibold neon-title"><i class="fa fa-calendar-check-o"></i> 今日值日</h3>
-                    <div class="flex gap-2">
-                        <button id="duty-gen-btn" class="mini-btn"><i class="fa fa-refresh"></i> 生成今日值日（每日 4 人）</button>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="duty-gen-btn" data-admin-only class="mini-btn"><i class="fa fa-refresh"></i> 生成今日值日（每日 4 人）</button>
+                        <button id="duty-edit-btn" data-admin-only class="mini-btn"><i class="fa fa-pencil"></i> 调整今日值日</button>
                     </div>
                 </div>
                 <div id="duty-today" class="mt-4">
@@ -507,7 +561,8 @@
             // ========== 配置 ==========
             const CONFIG = {
                 // 密钥
-                AUTH_HASH: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",
+                AUTH_HASH_NORMAL: "6F3C592D6BF1807EEA940D4DF92BFE4180B1A77F4304B59F365839114D9A89EE",  // 普通用户 2414777（原密钥，未改动）
+                AUTH_HASH_ADMIN:  "8018344F77546E0437ECDE8F1A7029C6DAA48E7DB50F13353F9EF0007E701431",  // 管理员 2414888
                 SUPA_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
                 SUPA_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux",
                 CODE_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
@@ -565,8 +620,17 @@
             // ========== 页面切换工具 ==========
             const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-duty","page-genmanage","page-dbconfig"];
             function showPage(pageId) {
+                // 管理员专属页面拦截（普通用户强行跳转会回主菜单）
+                const adminPages = ["page-generate", "page-genmanage", "page-dbconfig"];
+                if (currentRole !== "admin" && adminPages.indexOf(pageId) !== -1) {
+                    pageId = "page-menu";
+                }
                 allPages.forEach(p => document.getElementById(p).classList.add("hidden"));
                 document.getElementById(pageId).classList.remove("hidden");
+
+                // 右上角齿轮只在登录页显示
+                const gearEl = document.getElementById("admin-gear");
+                if (gearEl) gearEl.classList.toggle("hidden", pageId !== "page-login");
 
                 // 离开兑换/扫码页关闭摄像头
                 if (pageId !== "page-redeem" && window._scanScanner) {
@@ -584,36 +648,72 @@
                 if(pageId === "page-duty") loadDuty();
                 if(pageId === "page-genmanage") loadGenList();
             }
-
-            // ========== 登录逻辑 ==========
+            // ========== 登录逻辑（普通用户 / 管理员 双角色） ==========
             const pwdInput = document.getElementById("pwd-input");
             const loginBtn = document.getElementById("login-btn");
             const loginTip = document.getElementById("login-tip");
             const logoutBtn = document.getElementById("logout-btn");
 
+            const adminGear      = document.getElementById("admin-gear");
+            const adminMask      = document.getElementById("admin-mask");
+            const adminPwd       = document.getElementById("admin-pwd");
+            const adminLoginBtn  = document.getElementById("admin-login-btn");
+            const adminCancelBtn = document.getElementById("admin-cancel-btn");
+            const adminTip       = document.getElementById("admin-tip");
+
+            let currentRole = "";   // "" / "normal" / "admin"
+
+            function isAdmin() {
+                return currentRole === "admin";
+            }
+
+            // 应用角色：显现 / 隐藏管理员专属元素
+            function applyRole(role) {
+                currentRole = role;
+                try { document.body.dataset.role = role; } catch(e) {}
+                const badge = document.getElementById("role-badge");
+                if (badge) {
+                    badge.textContent = role === "admin" ? "管理员" : "普通用户";
+                    badge.className = "role-badge " + (role === "admin" ? "role-admin" : "role-normal");
+                }
+                document.querySelectorAll("[data-admin-only]").forEach(function(el) {
+                    el.classList.toggle("hidden", role !== "admin");
+                });
+            }
+
+            function enterSystem(role) {
+                loginTip.classList.add("hidden");
+                pwdInput.value = "";
+                applyRole(role);
+                if (pendingCode) {
+                    document.getElementById("redeem-input").value = pendingCode;
+                    document.getElementById("redeem-tip").innerHTML =
+                        '<div class="tip-ok">已自动填入兑换密钥，点击「立即兑换」完成核销</div>';
+                    showPage("page-redeem");
+                } else {
+                    showPage("page-menu");
+                }
+                console.log("登录成功，角色：" + role);
+            }
+
+            // —— 普通登录：只认普通密钥 ——
             loginBtn.addEventListener("click", async function() {
                 const pwd = pwdInput.value.trim();
                 if(!pwd) {
                     loginTip.classList.remove("hidden");
+                    loginTip.innerHTML = "请输入访问密钥";
                     return;
                 }
                 try {
                     const hash = await sha256(pwd);
-                    if(hash === CONFIG.AUTH_HASH) {
-                        loginTip.classList.add("hidden");
-                        pwdInput.value = "";
-                        if (pendingCode) {
-                            showPage("page-redeem");
-                            const ri = document.getElementById("redeem-input");
-                            ri.value = pendingCode;
-                            document.getElementById("redeem-tip").innerHTML =
-                                '<div class="tip-ok">已自动填入兑换密钥，点击「立即兑换」完成核销</div>';
-                        } else {
-                            showPage("page-menu");
-                        }
-                        console.log("登录成功");
+                    if(hash === CONFIG.AUTH_HASH_NORMAL) {
+                        enterSystem("normal");
+                    } else if(hash === CONFIG.AUTH_HASH_ADMIN) {
+                        loginTip.classList.remove("hidden");
+                        loginTip.innerHTML = "这是管理员密钥，请点右上角 ⚙ 齿轮进入";
                     } else {
                         loginTip.classList.remove("hidden");
+                        loginTip.innerHTML = "密钥错误，请重试";
                     }
                 } catch(e) {
                     alert("加密组件加载失败，请使用HTTPS地址访问本页面");
@@ -625,12 +725,58 @@
                 if(e.key === "Enter") loginBtn.click();
             });
 
-            logoutBtn.addEventListener("click", function() {
-                showPage("page-login");
-                pwdInput.value = "";
-                loginTip.classList.add("hidden");
+            // —— 管理员入口（右上角齿轮） ——
+            function openAdminLogin() {
+                adminTip.classList.add("hidden");
+                adminPwd.value = "";
+                adminMask.classList.remove("hidden");
+                setTimeout(function() { adminPwd.focus(); }, 50);
+            }
+            function closeAdminLogin() {
+                adminMask.classList.add("hidden");
+                adminPwd.value = "";
+            }
+
+            adminGear.addEventListener("click", openAdminLogin);
+            adminCancelBtn.addEventListener("click", closeAdminLogin);
+            adminMask.addEventListener("click", function(e) {
+                if (e.target === adminMask) closeAdminLogin();
             });
 
+            async function adminLogin() {
+                const pwd = adminPwd.value.trim();
+                if(!pwd) {
+                    adminTip.classList.remove("hidden");
+                    return;
+                }
+                try {
+                    const hash = await sha256(pwd);
+                    if(hash === CONFIG.AUTH_HASH_ADMIN) {
+                        closeAdminLogin();
+                        enterSystem("admin");
+                    } else {
+                        adminTip.classList.remove("hidden");
+                    }
+                } catch(e) {
+                    alert("加密组件加载失败，请使用HTTPS地址访问本页面");
+                    console.error(e);
+                }
+            }
+
+            adminLoginBtn.addEventListener("click", adminLogin);
+            adminPwd.addEventListener("keydown", function(e) {
+                if(e.key === "Enter") adminLogin();
+            });
+
+            // —— 退出：回到登录页并清除角色 ——
+            logoutBtn.addEventListener("click", function() {
+                applyRole("");
+                closeAdminLogin();
+                showPage("page-login");
+                pwdInput.value = "";
+                loginTip.classList.remove("hidden");
+                loginTip.innerHTML = "密钥错误，请重试";
+            });
             // ========== 菜单跳转 & 返回 ==========
             document.querySelectorAll("[data-goto]").forEach(function(el) {
                 el.addEventListener("click", function() {
@@ -807,7 +953,7 @@
                 data.forEach(function(item) {
                     const row = document.createElement("div");
                     row.className = "list-row";
-                    row.innerHTML = `<span>${item.name}</span><span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>`;
+                    row.innerHTML = `<span>${item.name}</span>` + (isAdmin() ? `<span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>` : "");
                     nameList.appendChild(row);
                 });
                 document.querySelectorAll("#name-list .del-btn").forEach(function(btn) {
@@ -969,7 +1115,7 @@
                             <span class="badge badge-ok">第 ${idx + 1} 位</span>
                             <span style="margin-left:6px;">${escapeHtml(item.name)}</span>
                         </span>
-                        <span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>
+                        ${isAdmin() ? `<span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>` : ``}
                     `;
                     dutyMemberList.appendChild(row);
                 });
@@ -1013,7 +1159,10 @@
                             <div class="font-semibold text-sm">${escapeHtml(item.date)}</div>
                             <div class="text-xs text-slate-300 mt-1">${names.map(escapeHtml).join("、")}</div>
                         </div>
-                        <span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>
+                        <div class="flex gap-2" style="flex:none;">
+                            ${isAdmin() ? `<span class="mini-btn" data-edit="${item.id}"><i class="fa fa-pencil"></i> 编辑</span>` : ``}
+                            ${isAdmin() ? `<span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>` : ``}
+                        </div>
                     `;
                     dutyRecordList.appendChild(row);
                 });
@@ -1022,6 +1171,15 @@
                         if(!confirm("确定删除这条值日记录吗？")) return;
                         await sb.from("duty_records").delete().eq("id", btn.dataset.id);
                         loadDuty();
+                    });
+                });
+                document.querySelectorAll("#duty-record-list [data-edit]").forEach(function(btn) {
+                    btn.addEventListener("click", function() {
+                        if(!isAdmin()) return;
+                        const id = btn.dataset.edit;
+                        const rec = dutyRecords.find(function(r) { return String(r.id) === String(id); });
+                        if(!rec) return;
+                        openDutyEditor(rec.date, parseMembers(rec.members), rec.id);
                     });
                 });
             }
@@ -1074,7 +1232,7 @@
                 // 今日已排过 → 直接刷新展示
                 const existed = dutyRecords.find(function(r) { return r.date === today; });
                 if(existed) {
-                    dutyTip.innerHTML = '<div class="tip-ok">今日值日已安排，可在列表中查看；如需换人请先删除今日记录</div>';
+                    dutyTip.innerHTML = '<div class="tip-ok">今日值日已安排；如需加减人或加入罚扫地，请点「调整今日值日」</div>';
                     renderDutyToday();
                     return;
                 }
@@ -1082,8 +1240,8 @@
                 // 找到上一条记录的起始下标，继续往后轮；没有则从 0 开始
                 let start = 0;
                 if(dutyRecords.length > 0) {
-                    const last = dutyRecords[dutyRecords.length - 1];
-                    start = (typeof last.start_index === "number") ? last.start_index : 0;
+                    const latest = dutyRecords[0];   // 记录按日期倒序，取最新一条的下一轮起点
+                    start = (typeof latest.start_index === "number") ? latest.start_index : 0;
                 }
 
                 const names = dutyMembers.map(function(m) { return m.name; });
@@ -1105,6 +1263,122 @@
 
                 dutyTip.innerHTML = `<div class="tip-ok">✅ 今日值日生：${picked.join("、")}</div>`;
                 await loadDuty();
+            });
+
+            // ========== 值日名单手动调整（管理员） ==========
+            const dutyEditBtn    = document.getElementById("duty-edit-btn");
+            const dutyEditMask   = document.getElementById("duty-edit-mask");
+            const dutyEditList   = document.getElementById("duty-edit-list");
+            const dutyEditExtra  = document.getElementById("duty-edit-extra");
+            const dutyEditTip    = document.getElementById("duty-edit-tip");
+            const dutyEditSave   = document.getElementById("duty-edit-save");
+            const dutyEditCancel = document.getElementById("duty-edit-cancel");
+            const dutyEditDateEl = document.getElementById("duty-edit-date");
+
+            let dutyEditId   = null;   // 正在编辑的记录 id；null = 当天还没有记录
+            let dutyEditDate = "";
+
+            function closeDutyEditor() {
+                dutyEditMask.classList.add("hidden");
+                dutyEditTip.innerHTML = "";
+            }
+
+            function openDutyEditor(date, names, id) {
+                if(!isAdmin()) return;
+                dutyEditDate = date;
+                dutyEditId = id || null;
+                dutyEditDateEl.textContent = "日期：" + date;
+                dutyEditTip.innerHTML = "";
+
+                const chosen = (names || []).slice();
+                dutyEditList.innerHTML = "";
+                if(dutyMembers.length === 0) {
+                    dutyEditList.innerHTML = '<div class="p-2 text-xs text-slate-500">值日名单里还没有人，可只在下方填写临时人员</div>';
+                } else {
+                    dutyMembers.forEach(function(m) {
+                        const isChk = chosen.indexOf(m.name) !== -1;
+                        const row = document.createElement("label");
+                        row.className = "list-row";
+                        row.style.cursor = "pointer";
+                        row.innerHTML = `<span style="display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" class="duty-chk" value="${escapeHtml(m.name)}" ${isChk ? "checked" : ""}>
+                                <span>${escapeHtml(m.name)}</span>
+                            </span>`;
+                        dutyEditList.appendChild(row);
+                    });
+                }
+
+                const extras = chosen.filter(function(n) {
+                    return !dutyMembers.some(function(m) { return m.name === n; });
+                });
+                dutyEditExtra.value = extras.join("、");
+
+                dutyEditMask.classList.remove("hidden");
+            }
+
+            function collectEditNames() {
+                const picked = [];
+                dutyEditList.querySelectorAll(".duty-chk:checked").forEach(function(el) {
+                    picked.push(el.value);
+                });
+                const extras = dutyEditExtra.value.split(/[,，、;；\s]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+                const out = picked.slice();
+                extras.forEach(function(n) { if(out.indexOf(n) === -1) out.push(n); });
+                return out;
+            }
+
+            async function saveDutyEdit() {
+                if(!sb) { dutyEditTip.innerHTML = '<div class="tip-err">数据库未连接</div>'; return; }
+                const names = collectEditNames();
+                if(names.length === 0) {
+                    dutyEditTip.innerHTML = '<div class="tip-err">至少勾选 1 人或填写临时人员</div>';
+                    return;
+                }
+                const membersText = JSON.stringify(names);
+
+                if(dutyEditId) {
+                    const { error } = await sb.from("duty_records").update({ members: membersText }).eq("id", dutyEditId);
+                    if(error) {
+                        dutyEditTip.innerHTML = '<div class="tip-err">保存失败：' + escapeHtml(error.message) + '</div>';
+                        return;
+                    }
+                } else {
+                    let base = 0;
+                    if(dutyRecords.length > 0) {
+                        const latest = dutyRecords[0];
+                        base = (typeof latest.start_index === "number") ? latest.start_index : 0;
+                    }
+                    const rosterPicked = names.filter(function(n) {
+                        return dutyMembers.some(function(m) { return m.name === n; });
+                    }).length;
+                    const nextStart = dutyMembers.length ? (base + rosterPicked) % dutyMembers.length : 0;
+                    const { error } = await sb.from("duty_records").insert({
+                        date: dutyEditDate,
+                        members: membersText,
+                        start_index: nextStart
+                    });
+                    if(error) {
+                        dutyEditTip.innerHTML = '<div class="tip-err">保存失败：' + escapeHtml(error.message) + '</div>';
+                        return;
+                    }
+                }
+
+                const savedDate = dutyEditDate;
+                closeDutyEditor();
+                await loadDuty();
+                dutyTip.innerHTML = '<div class="tip-ok">✅ 已保存 ' + escapeHtml(savedDate) + ' 的值日名单</div>';
+            }
+
+            dutyEditBtn.addEventListener("click", function() {
+                if(!isAdmin()) return;
+                const today = todayStr();
+                const rec = dutyRecords.find(function(r) { return r.date === today; });
+                openDutyEditor(today, rec ? parseMembers(rec.members) : [], rec ? rec.id : null);
+            });
+            dutyEditSave.addEventListener("click", saveDutyEdit);
+            dutyEditCancel.addEventListener("click", closeDutyEditor);
+            dutyEditMask.addEventListener("click", function(e) {
+                if(e.target === dutyEditMask) closeDutyEditor();
             });
 
             // ========== 数据库配置页（SQL 展示 + 复制） ==========
