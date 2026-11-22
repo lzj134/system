@@ -484,12 +484,12 @@
                 </div>
 
                 <!-- 建表 SQL -->
-                <div class="divider-title">① 一键建表（Supabase → SQL Editor 粘贴运行）</div>
+                <div class="divider-title">① 一键建表</div>
                 <pre id="sql-create" class="tech-input" style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;max-height:260px;overflow:auto;"></pre>
                 <button class="mini-btn mt-2" data-copy="sql-create"><i class="fa fa-copy"></i> 复制建表 SQL</button>
 
                 <!-- 策略 SQL -->
-                <div class="divider-title">② 安全策略（开启 RLS 后，允许网页读写；USING / WITH CHECK 均为 true）</div>
+                <div class="divider-title">② 安全策略</div>
                 <pre id="sql-policy" class="tech-input" style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;max-height:320px;overflow:auto;"></pre>
                 <button class="mini-btn mt-2" data-copy="sql-policy"><i class="fa fa-copy"></i> 复制策略 SQL</button>
 
@@ -1040,7 +1040,7 @@
                             return `<span class="duty-chip">${escapeHtml(n)}${pos ? `<span style="font-size:11px;opacity:.7;">（${pos}）</span>` : ""}</span>`;
                         }).join("");
                 } else {
-                    dutyTodayBox.innerHTML = '<div class="scan-hint">今日尚未安排值日，点击「生成今日值日」将按名单顺序依次安排 4 人，不随机抽取</div>';
+                    dutyTodayBox.innerHTML = '<div class="scan-hint">今日尚未安排值日，点击「生成今日值日」将按名单顺序依次安排 4 人</div>';
                 }
             }
 
