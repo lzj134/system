@@ -445,6 +445,22 @@
                 <div id="duty-member-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
             </div>
 
+            <!-- 罚扫地人员备忘录 -->
+            <div class="glass-card mb-6">
+                <div class="flex justify-between items-center flex-wrap gap-2 mb-3">
+                    <h4 class="font-semibold text-sm text-slate-300"><i class="fa fa-book"></i> 罚扫地人员</h4>
+                    <span class="text-xs text-slate-500">姓名 + 剩余天数</span>
+                </div>
+                <div id="penalty-add-row" data-admin-only class="flex gap-3 mb-3 flex-wrap">
+                    <input id="penalty-name" class="tech-input flex-1" style="min-width:140px" placeholder="姓名">
+                    <input id="penalty-days" type="number" min="1" value="1" class="tech-input" style="width:96px;flex:none" placeholder="天数">
+                    <button id="penalty-add-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
+                </div>
+                <div id="penalty-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+                <button id="penalty-onekey-btn" data-admin-only class="tech-btn mt-4"><i class="fa fa-bolt"></i> 一键安排当天值日</button>
+                <div id="penalty-tip" class="mt-3"></div>
+            </div>
+
             <!-- 历史值日记录 -->
             <div class="glass-card">
                 <h4 class="font-semibold mb-3 text-sm text-slate-300"><i class="fa fa-history"></i> 值日历史记录</h4>
@@ -503,7 +519,7 @@
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
             <div class="glass-card">
                 <h3 class="text-lg font-semibold mb-4 neon-title"><i class="fa fa-cog"></i> 数据库配置说明</h3>
-                <p class="text-sm text-slate-400 mb-4">本系统在 Supabase 中使用以下 4 张表。<span class="text-emerald-400">codes</span>、<span class="text-emerald-400">clean</span> 为旧表（已存在）；<span class="text-indigo-300">duty_members</span>、<span class="text-indigo-300">duty_records</span> 为值日模块新建表。字段名必须与下表完全一致。</p>
+                <p class="text-sm text-slate-400 mb-4">本系统在 Supabase 中使用以下 5 张表。<span class="text-emerald-400">codes</span>、<span class="text-emerald-400">clean</span> 为旧表（已存在）；<span class="text-indigo-300">duty_members</span>、<span class="text-indigo-300">duty_records</span>、<span class="text-indigo-300">penalty_members</span> 为值日模块新建表。字段名必须与下表完全一致。</p>
 
                 <!-- 表结构对照 -->
                 <div class="space-y-4 mb-6">
@@ -521,6 +537,14 @@
                             <div><span class="font-mono text-amber-300">date</span> — text，日期，格式 2026-11-22</div>
                             <div><span class="font-mono text-amber-300">members</span> — text，当日人员（JSON 数组文本）</div>
                             <div><span class="font-mono text-amber-300">start_index</span> — int8 / int4，默认 0，下一轮起始位次</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-4">
+                        <h4 class="font-semibold text-indigo-300 mb-2">penalty_members（罚扫地备忘录表）</h4>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <div><span class="font-mono text-amber-300">id</span> — int8，主键，自增</div>
+                            <div><span class="font-mono text-amber-300">name</span> — text，唯一，姓名</div>
+                            <div><span class="font-mono text-amber-300">days</span> — int4，剩余罚扫地天数</div>
                         </div>
                     </div>
                     <div class="bg-slate-900/60 rounded-xl p-4">
@@ -710,7 +734,7 @@
                         enterSystem("normal");
                     } else if(hash === CONFIG.AUTH_HASH_ADMIN) {
                         loginTip.classList.remove("hidden");
-                        loginTip.innerHTML = "这是管理员密钥，请点右上角 ⚙ 齿轮进入";
+                        loginTip.innerHTML = "管理员密钥，请点右上角 ⚙ 齿轮进入";
                     } else {
                         loginTip.classList.remove("hidden");
                         loginTip.innerHTML = "密钥错误，请重试";
@@ -1087,6 +1111,7 @@
                 }
                 await loadDutyMembers();
                 await loadDutyRecords();
+                await loadPenalty();
                 renderDutyToday();
             }
 
@@ -1265,6 +1290,156 @@
                 await loadDuty();
             });
 
+            // ========== 罚扫地人员备忘录（姓名 + 剩余天数） ==========
+            const penaltyName   = document.getElementById("penalty-name");
+            const penaltyDays   = document.getElementById("penalty-days");
+            const penaltyAddBtn = document.getElementById("penalty-add-btn");
+            const penaltyList   = document.getElementById("penalty-list");
+            const penaltyTip    = document.getElementById("penalty-tip");
+            const penaltyOneKey = document.getElementById("penalty-onekey-btn");
+
+            let penaltyMembers = [];   // [{id, name, days}]
+
+            function showPenaltyTip(msg, ok) {
+                penaltyTip.innerHTML = '<div class="' + (ok ? 'tip-ok' : 'tip-err') + '">' + msg + '</div>';
+            }
+
+            async function loadPenalty() {
+                if(!sb) {
+                    penaltyList.innerHTML = '<div class="p-3 text-red-400">数据库未连接</div>';
+                    return;
+                }
+                const { data, error } = await sb.from("penalty_members").select("*").order("id", { ascending: true });
+                if(error) {
+                    penaltyMembers = [];
+                    penaltyList.innerHTML = '<div class="p-3 text-xs text-amber-300">读取失败：' + escapeHtml(error.message) +
+                        '<br>若提示表不存在，请到「数据库配置」页复制执行新增的建表 SQL（penalty_members）</div>';
+                    return;
+                }
+                penaltyMembers = data || [];
+                renderPenaltyList();
+            }
+
+            function renderPenaltyList() {
+                penaltyList.innerHTML = "";
+                if(penaltyMembers.length === 0) {
+                    penaltyList.innerHTML = '<div class="p-3 text-slate-500 text-center text-sm">暂无罚扫地人员</div>';
+                    return;
+                }
+                penaltyMembers.forEach(function(item) {
+                    const row = document.createElement("div");
+                    row.className = "list-row";
+                    const days = Number(item.days) || 0;
+                    row.innerHTML = `
+                        <span style="min-width:0;">
+                            <span class="font-semibold">${escapeHtml(item.name)}</span>
+                            <span class="badge ${days > 0 ? 'badge-used' : 'badge-ok'}" style="margin-left:8px;">剩 ${days} 天</span>
+                        </span>
+                        <span class="flex gap-2" style="flex:none;">
+                            ${isAdmin() ? `<span class="mini-btn" data-act="minus" data-id="${item.id}">-1 天</span>` : ``}
+                            ${isAdmin() ? `<span class="mini-btn" data-act="plus" data-id="${item.id}">+1 天</span>` : ``}
+                            ${isAdmin() ? `<span class="del-btn" data-act="del" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>` : ``}
+                        </span>
+                    `;
+                    penaltyList.appendChild(row);
+                });
+            }
+
+            penaltyList.addEventListener("click", async function(e) {
+                const btn = e.target.closest("[data-act]");
+                if(!btn || !isAdmin() || !sb) return;
+                const item = penaltyMembers.find(function(i) { return String(i.id) === btn.dataset.id; });
+                if(!item) return;
+                const act = btn.dataset.act;
+
+                if(act === "del") {
+                    if(!confirm("确定把「" + item.name + "」从罚扫地备忘录删除吗？")) return;
+                    await sb.from("penalty_members").delete().eq("id", item.id);
+                    await loadPenalty();
+                    return;
+                }
+                if(act === "plus" || act === "minus") {
+                    const delta = act === "plus" ? 1 : -1;
+                    const days = Math.max(0, (Number(item.days) || 0) + delta);
+                    await sb.from("penalty_members").update({ days: days }).eq("id", item.id);
+                    await loadPenalty();
+                }
+            });
+
+            penaltyAddBtn.addEventListener("click", async function() {
+                if(!sb) { showPenaltyTip("数据库未连接", false); return; }
+                const name = penaltyName.value.trim();
+                const days = parseInt(penaltyDays.value, 10);
+                if(!name) { showPenaltyTip("请先填写姓名", false); return; }
+                if(!days || days < 1) { showPenaltyTip("天数至少 1 天", false); return; }
+
+                const { error } = await sb.from("penalty_members").insert({ name: name, days: days });
+                if(error) {
+                    showPenaltyTip("添加失败：" + escapeHtml(error.message) + "（姓名可能重复，或表还没建）", false);
+                    return;
+                }
+                penaltyName.value = "";
+                penaltyDays.value = 1;
+                showPenaltyTip("✅ 已添加「" + escapeHtml(name) + "」，罚扫地 " + days + " 天", true);
+                await loadPenalty();
+            });
+
+            // 一键安排：正常轮转 4 人 + 所有还有天数的罚扫地人员，罚扫地天数自动 -1
+            penaltyOneKey.addEventListener("click", async function() {
+                if(!sb) { showPenaltyTip("数据库未连接", false); return; }
+                if(!isAdmin()) return;
+                if(dutyMembers.length < CONFIG.DUTY_PER_DAY) {
+                    showPenaltyTip("值日名单不足 " + CONFIG.DUTY_PER_DAY + " 人，请先在上方添加成员", false);
+                    return;
+                }
+
+                const today = todayStr();
+                const existed = dutyRecords.find(function(r) { return r.date === today; });
+                if(existed && !confirm("今天已有值日记录，确定用一键安排覆盖吗？")) return;
+
+                const names = dutyMembers.map(function(m) { return m.name; });
+                let base = 0;
+                const prev = dutyRecords.find(function(r) { return r.date !== today; });
+                if(prev) base = (typeof prev.start_index === "number") ? prev.start_index : 0;
+
+                const picked = [];
+                for(let i = 0; i < CONFIG.DUTY_PER_DAY; i++) {
+                    picked.push(names[(base + i) % names.length]);
+                }
+                const nextStart = (base + CONFIG.DUTY_PER_DAY) % names.length;
+
+                const penalties = penaltyMembers.filter(function(p) { return (Number(p.days) || 0) > 0; });
+                const merged = picked.concat(penalties.map(function(p) { return p.name; }));
+
+                let err = null;
+                if(existed) {
+                    const r = await sb.from("duty_records").update({
+                        members: JSON.stringify(merged),
+                        start_index: nextStart
+                    }).eq("id", existed.id);
+                    err = r.error;
+                } else {
+                    const r = await sb.from("duty_records").insert({
+                        date: today,
+                        members: JSON.stringify(merged),
+                        start_index: nextStart
+                    });
+                    err = r.error;
+                }
+                if(err) { showPenaltyTip("排班失败：" + escapeHtml(err.message), false); return; }
+
+                for(const p of penalties) {
+                    const left = (Number(p.days) || 0) - 1;
+                    if(left > 0) await sb.from("penalty_members").update({ days: left }).eq("id", p.id);
+                    else await sb.from("penalty_members").delete().eq("id", p.id);
+                }
+
+                await loadDuty();
+                dutyTip.innerHTML = '<div class="tip-ok">✅ 今日值日：' + merged.map(escapeHtml).join("、") + '</div>';
+                showPenaltyTip("✅ 已安排 " + merged.length + " 人" +
+                    (penalties.length ? "（含罚扫地 " + penalties.length + " 人，剩余天数已 -1，清零的已移出备忘录）" : ""), true);
+            });
+
             // ========== 值日名单手动调整（管理员） ==========
             const dutyEditBtn    = document.getElementById("duty-edit-btn");
             const dutyEditMask   = document.getElementById("duty-edit-mask");
@@ -1395,6 +1570,13 @@
                 "  date        text not null,",
                 "  members     text not null,",
                 "  start_index integer not null default 0",
+                ");",
+                "",
+                "-- 罚扫地人员备忘录表",
+                "create table if not exists penalty_members (",
+                "  id   bigint generated always as identity primary key,",
+                "  name text not null unique,",
+                "  days integer not null default 1",
                 ");"
             ].join("\n");
 
@@ -1413,7 +1595,14 @@
                 "create policy \"dr_select\" on public.duty_records for select to anon, authenticated using (true);",
                 "create policy \"dr_insert\" on public.duty_records for insert to anon, authenticated with check (true);",
                 "create policy \"dr_update\" on public.duty_records for update to anon, authenticated using (true) with check (true);",
-                "create policy \"dr_delete\" on public.duty_records for delete to anon, authenticated using (true);"
+                "create policy \"dr_delete\" on public.duty_records for delete to anon, authenticated using (true);",
+                "",
+                "-- penalty_members 放开网页读写",
+                "alter table public.penalty_members enable row level security;",
+                "create policy \"pm_select\" on public.penalty_members for select to anon, authenticated using (true);",
+                "create policy \"pm_insert\" on public.penalty_members for insert to anon, authenticated with check (true);",
+                "create policy \"pm_update\" on public.penalty_members for update to anon, authenticated using (true) with check (true);",
+                "create policy \"pm_delete\" on public.penalty_members for delete to anon, authenticated using (true);"
             ].join("\n");
 
             const sqlCreateEl = document.getElementById("sql-create");
