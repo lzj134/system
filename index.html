@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>免扫地云管理系统</title>
+    <title>云扫地管理系统</title>
     <!-- 样式库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
-    
+
     <!-- 数据库库UMD路径 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
-    
+
     <!-- 二维码相关库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -215,6 +215,22 @@
         .qr-row .code-text { color: #111; margin-top: 8px; }
         #gm-filter option { background: #1e293b; color: #f1f5f9; }
         .scan-hint { color:#94a3b8; font-size:13px; text-align:center; padding:8px; }
+        .duty-chip {
+            display: inline-block;
+            padding: 8px 14px;
+            margin: 4px;
+            border-radius: 10px;
+            background: rgba(79,70,229,0.25);
+            border: 1px solid rgba(129,140,248,0.4);
+            color: #e0e7ff;
+            font-weight: 600;
+        }
+        .divider-title {
+            font-size: 13px;
+            color: #94a3b8;
+            margin: 20px 0 10px;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
@@ -223,7 +239,7 @@
         <div class="glass-card w-full max-w-md">
             <div class="text-center mb-8">
                 <div class="text-4xl mb-3">🔐</div>
-                <h2 class="text-2xl font-bold neon-title">云端管理系统</h2>
+                <h2 class="text-2xl font-bold neon-title">云扫地管理系统</h2>
                 <p class="text-sm text-slate-400 mt-2" id="login-subtitle">管理密钥请联系管理员，班长或卫生委员廖志强</p>
             </div>
             <input type="password" id="pwd-input" class="tech-input mb-4" placeholder="输入访问密钥">
@@ -239,14 +255,14 @@
         <div class="max-w-5xl mx-auto">
             <div class="glass-card mb-6">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 免扫地云管理系统</h1>
+                    <h1 class="text-xl font-bold neon-title"><i class="fa fa-cube"></i> 云扫地管理系统</h1>
                     <button id="logout-btn" class="px-4 py-2 bg-red-600 rounded-lg text-sm">退出系统</button>
                 </div>
             </div>
             <div class="menu-grid">
                 <div class="menu-item" data-goto="redeem">
                     <i class="fa fa-gift"></i>
-                    <div>兑换码兑换</div>
+                    <div>扫码兑换</div>
                 </div>
                 <div class="menu-item" data-goto="generate">
                     <i class="fa fa-key"></i>
@@ -260,27 +276,42 @@
                     <i class="fa fa-users"></i>
                     <div>免扫地人员表</div>
                 </div>
-                <div class="menu-item" data-goto="scan">
-                    <i class="fa fa-qrcode"></i>
-                    <div>扫码兑换</div>
+                <div class="menu-item" data-goto="duty">
+                    <i class="fa fa-calendar-check-o"></i>
+                    <div>值日安排</div>
                 </div>
                 <div class="menu-item" data-goto="genmanage">
                     <i class="fa fa-database"></i>
                     <div>生成信息管理</div>
                 </div>
+                <div class="menu-item" data-goto="dbconfig">
+                    <i class="fa fa-cog"></i>
+                    <div>数据库配置<br>不要乱动</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 兑换码兑换页 -->
+    <!-- 兑换码 + 扫码 合并页 -->
     <div id="page-redeem" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
-            <div class="glass-card">
-                <h3 class="text-lg font-semibold mb-4 neon-title">兑换码核验</h3>
+
+            <!-- 上半部分：兑换码核验 -->
+            <div class="glass-card mb-6">
+                <h3 class="text-lg font-semibold mb-4 neon-title"><i class="fa fa-keyboard-o"></i> 兑换码核验</h3>
                 <input id="redeem-input" class="tech-input mb-4" placeholder="请输入兑换密钥">
                 <button id="redeem-btn" class="tech-btn"><i class="fa fa-check-circle"></i> 立即兑换</button>
                 <div id="redeem-tip" class="mt-4"></div>
+            </div>
+
+            <!-- 下半部分：扫码兑换 -->
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title"><i class="fa fa-qrcode"></i> 扫码兑换</h3>
+                <div id="reader"></div>
+                <div id="scan-tip" class="mt-4"></div>
+                <button id="scan-stop-btn" class="tech-btn mt-4 hidden" style="background: linear-gradient(135deg,#334155,#475569)">停止摄像头</button>
+                <button id="scan-again-btn" class="tech-btn mt-4 hidden"><i class="fa fa-refresh"></i> 再次扫码</button>
             </div>
         </div>
     </div>
@@ -299,7 +330,7 @@
                     </div>
                 </div>
                 <div id="gen-tip" class="mb-4"></div>
-                <h4 class="font-semibold mb-2 text-sm text-slate-300">生成卡片（扫码自动跳转核销页面）</h4>
+                <h4 class="font-semibold mb-2 text-sm text-slate-300">生成卡片</h4>
                 <div id="card-list" class="card-grid"></div>
             </div>
         </div>
@@ -331,16 +362,39 @@
         </div>
     </div>
 
-    <!-- 扫码兑换页 -->
-    <div id="page-scan" class="hidden p-4 md:p-8">
+    <!-- 值日安排页 -->
+    <div id="page-duty" class="hidden p-4 md:p-8">
         <div class="max-w-3xl mx-auto">
             <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
+
+            <!-- 今日值日 -->
+            <div class="glass-card mb-6">
+                <div class="flex justify-between items-center flex-wrap gap-3">
+                    <h3 class="text-lg font-semibold neon-title"><i class="fa fa-calendar-check-o"></i> 今日值日</h3>
+                    <div class="flex gap-2">
+                        <button id="duty-gen-btn" class="mini-btn"><i class="fa fa-refresh"></i> 生成今日值日（每日 4 人）</button>
+                    </div>
+                </div>
+                <div id="duty-today" class="mt-4">
+                    <div class="scan-hint">点击上方按钮，自动按名单顺序轮换安排今日 4 名值日生</div>
+                </div>
+                <div id="duty-tip" class="mt-3"></div>
+            </div>
+
+            <!-- 值日成员名单 -->
+            <div class="glass-card mb-6">
+                <h4 class="font-semibold mb-3 text-sm text-slate-300"><i class="fa fa-users"></i> 值日成员名单</h4>
+                <div class="flex gap-3 mb-4">
+                    <input id="duty-name-input" class="tech-input flex-1" placeholder="输入要参加值日的同学姓名">
+                    <button id="duty-add-btn" class="tech-btn w-auto px-6"><i class="fa fa-plus"></i> 添加</button>
+                </div>
+                <div id="duty-member-list" class="bg-slate-900/60 rounded-xl max-h-72 overflow-y-auto"></div>
+            </div>
+
+            <!-- 历史值日记录 -->
             <div class="glass-card">
-                <h3 class="text-lg font-semibold mb-4 neon-title">扫码兑换</h3>
-                <div id="reader"></div>
-                <div id="scan-tip" class="mt-4"></div>
-                <button id="scan-stop-btn" class="tech-btn mt-4 hidden" style="background: linear-gradient(135deg,#334155,#475569)">停止摄像头</button>
-                <button id="scan-again-btn" class="tech-btn mt-4 hidden"><i class="fa fa-refresh"></i> 再次扫码</button>
+                <h4 class="font-semibold mb-3 text-sm text-slate-300"><i class="fa fa-history"></i> 值日历史记录</h4>
+                <div id="duty-record-list" class="bg-slate-900/60 rounded-xl max-h-96 overflow-y-auto"></div>
             </div>
         </div>
     </div>
@@ -389,6 +443,62 @@
         </div>
     </div>
 
+    <!-- 数据库配置说明页 -->
+    <div id="page-dbconfig" class="hidden p-4 md:p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="back-btn" data-back="menu"><i class="fa fa-arrow-left"></i> 返回主页</div>
+            <div class="glass-card">
+                <h3 class="text-lg font-semibold mb-4 neon-title"><i class="fa fa-cog"></i> 数据库配置说明</h3>
+                <p class="text-sm text-slate-400 mb-4">本系统在 Supabase 中使用以下 4 张表。<span class="text-emerald-400">codes</span>、<span class="text-emerald-400">clean</span> 为旧表（已存在）；<span class="text-indigo-300">duty_members</span>、<span class="text-indigo-300">duty_records</span> 为值日模块新建表。字段名必须与下表完全一致。</p>
+
+                <!-- 表结构对照 -->
+                <div class="space-y-4 mb-6">
+                    <div class="bg-slate-900/60 rounded-xl p-4">
+                        <h4 class="font-semibold text-indigo-300 mb-2">duty_members（值日成员表）</h4>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <div><span class="font-mono text-amber-300">id</span> — int8，主键，自增</div>
+                            <div><span class="font-mono text-amber-300">name</span> — text，唯一，值日生姓名</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-4">
+                        <h4 class="font-semibold text-indigo-300 mb-2">duty_records（值日记录表）</h4>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <div><span class="font-mono text-amber-300">id</span> — int8，主键，自增</div>
+                            <div><span class="font-mono text-amber-300">date</span> — text，日期，格式 2026-11-22</div>
+                            <div><span class="font-mono text-amber-300">members</span> — text，当日人员（JSON 数组文本）</div>
+                            <div><span class="font-mono text-amber-300">start_index</span> — int8 / int4，默认 0，下一轮起始位次</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-4">
+                        <h4 class="font-semibold text-slate-300 mb-2">codes（兑换码表 · 已有）</h4>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <div><span class="font-mono text-amber-300">id</span> — int8，主键；<span class="font-mono text-amber-300">code</span> — text；<span class="font-mono text-amber-300">reward</span> — text；<span class="font-mono text-amber-300">used</span> — boolean；<span class="font-mono text-amber-300">use_time</span> — text</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-xl p-4">
+                        <h4 class="font-semibold text-slate-300 mb-2">clean（免扫地人员表 · 已有）</h4>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <div><span class="font-mono text-amber-300">id</span> — int8，主键；<span class="font-mono text-amber-300">name</span> — text，唯一</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 建表 SQL -->
+                <div class="divider-title">① 一键建表（Supabase → SQL Editor 粘贴运行）</div>
+                <pre id="sql-create" class="tech-input" style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;max-height:260px;overflow:auto;"></pre>
+                <button class="mini-btn mt-2" data-copy="sql-create"><i class="fa fa-copy"></i> 复制建表 SQL</button>
+
+                <!-- 策略 SQL -->
+                <div class="divider-title">② 安全策略（开启 RLS 后，允许网页读写；USING / WITH CHECK 均为 true）</div>
+                <pre id="sql-policy" class="tech-input" style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;max-height:320px;overflow:auto;"></pre>
+                <button class="mini-btn mt-2" data-copy="sql-policy"><i class="fa fa-copy"></i> 复制策略 SQL</button>
+
+                <div id="dbcfg-tip" class="mt-4"></div>
+                <p class="text-xs text-slate-500 mt-3">提示：若你的 codes、clean 旧表是关闭 RLS 使用的，新表也可直接关闭 RLS；开启 RLS 则必须配置上面的策略，否则网页读不到数据。</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 页面DOM加载完成后再执行所有代码
         document.addEventListener('DOMContentLoaded', function() {
@@ -401,7 +511,8 @@
                 SUPA_URL: "https://qxnguajnmjltegcihuzj.supabase.co",
                 SUPA_KEY: "sb_publishable_kav7LpNfWNPObWnbQfTttw_NioPGsux",
                 CODE_POOL: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
-                CODE_LEN: 12
+                CODE_LEN: 12,
+                DUTY_PER_DAY: 4
             };
 
             // ========== 工具：SHA256加密 ==========
@@ -414,24 +525,21 @@
             }
 
             // ========== 本页基础地址 & 二维码内容 ==========
-            // 二维码「本页面网址 + ?code=兑换码」
             const PAGE_BASE = location.href.split("#")[0].split("?")[0];
 
             function buildQrText(code) {
                 return PAGE_BASE + "?code=" + encodeURIComponent(code);
             }
 
-            // 从扫码结果 / 粘贴内容中提取兑换码（兼容纯兑换码、URL、?code=xxx）
+            // 从扫码结果 / 粘贴内容中提取兑换码
             function extractCode(raw) {
                 let t = (raw || "").trim();
                 if (!t) return "";
-                // 形如 ?code=XXXX 或 &code=XXXX
                 const m = t.match(/[?&]code=([^&\s#]+)/i);
                 if (m) {
                     try { return decodeURIComponent(m[1]).trim().toUpperCase(); }
                     catch (e) { return m[1].trim().toUpperCase(); }
                 }
-                // 尝试按 URL 解析
                 try {
                     const u = new URL(t);
                     const c = u.searchParams.get("code");
@@ -455,16 +563,16 @@
             }
 
             // ========== 页面切换工具 ==========
-            const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-scan","page-genmanage"];
+            const allPages = ["page-login","page-menu","page-redeem","page-generate","page-record","page-clean","page-duty","page-genmanage","page-dbconfig"];
             function showPage(pageId) {
                 allPages.forEach(p => document.getElementById(p).classList.add("hidden"));
                 document.getElementById(pageId).classList.remove("hidden");
 
-                // 离开扫码页关闭摄像头
-                if (pageId !== "page-scan" && window._scanScanner) {
+                // 离开兑换/扫码页关闭摄像头
+                if (pageId !== "page-redeem" && window._scanScanner) {
                     stopScanner();
                 }
-                if (pageId !== "page-scan") {
+                if (pageId !== "page-redeem") {
                     const again = document.getElementById("scan-again-btn");
                     if (again) again.classList.add("hidden");
                 }
@@ -472,11 +580,12 @@
                 // 进入对应页面刷新数据
                 if(pageId === "page-record") loadRecordList();
                 if(pageId === "page-clean") loadNameList();
-                if(pageId === "page-scan") startScan();
+                if(pageId === "page-redeem") startScan();
+                if(pageId === "page-duty") loadDuty();
                 if(pageId === "page-genmanage") loadGenList();
             }
 
-            // ========== 登录逻辑（完全独立，不依赖数据库） ==========
+            // ========== 登录逻辑 ==========
             const pwdInput = document.getElementById("pwd-input");
             const loginBtn = document.getElementById("login-btn");
             const loginTip = document.getElementById("login-tip");
@@ -493,7 +602,6 @@
                     if(hash === CONFIG.AUTH_HASH) {
                         loginTip.classList.add("hidden");
                         pwdInput.value = "";
-                        // 带兑换码进入 → 直接进入核销页并自动填码
                         if (pendingCode) {
                             showPage("page-redeem");
                             const ri = document.getElementById("redeem-input");
@@ -513,7 +621,6 @@
                 }
             });
 
-            // 回车登录
             pwdInput.addEventListener("keydown", function(e) {
                 if(e.key === "Enter") loginBtn.click();
             });
@@ -547,7 +654,6 @@
                 }
             } catch(e) {
                 console.error("❌ 数据库初始化失败", e);
-                // 不阻塞登录，只提示功能异常
             }
 
             // ========== 生成兑换码 ==========
@@ -596,7 +702,6 @@
                 rewardInput.value = "";
                 cardList.innerHTML = "";
 
-                // 渲染二维码卡片（二维码内容 = 网址 + 兑换码）
                 newCodes.forEach(function(code) {
                     const card = document.createElement("div");
                     card.className = "code-card";
@@ -604,7 +709,7 @@
                     card.innerHTML = `
                         <div class="qrcode-wrap" id="${qrId}"></div>
                         <div class="code-text">${code}</div>
-                        <div style="font-size:11px;color:#666;margin-top:6px;">扫码 → 登录 → 自动核销</div>
+                        <div style="font-size:11px;color:#666;margin-top:6px;">扫码 → 自动核销</div>
                     `;
                     cardList.appendChild(card);
                     new QRCode(document.getElementById(qrId), { text: buildQrText(code), width: 140, height: 140 });
@@ -637,7 +742,6 @@
                 redeemTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
                 if(res.ok) {
                     redeemInput.value = "";
-                    // 兑换完成后清掉地址栏里的 code，避免刷新重复核销
                     if (pendingCode) {
                         pendingCode = "";
                         try { history.replaceState(null, "", PAGE_BASE); } catch(e) {}
@@ -645,7 +749,6 @@
                 }
             });
 
-            // 兑换页回车
             redeemInput.addEventListener("keydown", function(e) {
                 if(e.key === "Enter") redeemBtn.click();
             });
@@ -731,12 +834,12 @@
                 loadNameList();
             });
 
-            // ========== 扫码兑换（一次只识别一个码） ==========
+            // ========== 扫码兑换（合并到兑换页下半部分） ==========
             const scanTip = document.getElementById("scan-tip");
             const scanStopBtn = document.getElementById("scan-stop-btn");
             const scanAgainBtn = document.getElementById("scan-again-btn");
 
-            let scanHandled = false; // 本次扫码是否已处理过，防止连续识别
+            let scanHandled = false;
 
             async function stopScanner() {
                 const s = window._scanScanner;
@@ -748,20 +851,17 @@
             }
 
             async function onScanSuccess(decodedText) {
-                // 一次扫码只处理一次
                 if (scanHandled) return;
                 scanHandled = true;
 
                 const code = extractCode(decodedText);
                 scanTip.innerHTML = '<div class="tip-ok">已识别，正在核销…</div>';
 
-                // 立刻停止摄像头，避免继续识别
                 await stopScanner();
 
                 const res = await doRedeem(code);
                 scanTip.innerHTML = `<div class="${res.ok ? 'tip-ok' : 'tip-err'}">${res.msg}</div>`;
 
-                // 显示「再次扫码」按钮，由用户决定是否再扫
                 scanAgainBtn.classList.remove("hidden");
             }
 
@@ -773,7 +873,7 @@
                 if (window._scanScanner) { await stopScanner(); }
 
                 scanHandled = false;
-                scanTip.innerHTML = '<div class="scan-hint">请将二维码放入取景框内，一次只识别一个</div>';
+                scanTip.innerHTML = '<div class="scan-hint">请将二维码放入取景框内</div>';
                 scanStopBtn.classList.remove("hidden");
                 scanAgainBtn.classList.add("hidden");
 
@@ -803,9 +903,278 @@
                 scanAgainBtn.classList.remove("hidden");
             });
 
-            // 再次扫码
             scanAgainBtn.addEventListener("click", function() {
                 startScan();
+            });
+
+            // ========== 值日安排（每日 4 人自动轮转） ==========
+            const dutyNameInput   = document.getElementById("duty-name-input");
+            const dutyAddBtn      = document.getElementById("duty-add-btn");
+            const dutyMemberList  = document.getElementById("duty-member-list");
+            const dutyTodayBox    = document.getElementById("duty-today");
+            const dutyTip         = document.getElementById("duty-tip");
+            const dutyGenBtn      = document.getElementById("duty-gen-btn");
+            const dutyRecordList  = document.getElementById("duty-record-list");
+
+            let dutyMembers = [];   // [{id, name}]
+            let dutyRecords = [];   // [{id, date, members, start_index}]
+
+            function todayStr() {
+                const d = new Date();
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${y}-${m}-${day}`;
+            }
+
+            function escapeHtml(s) {
+                return String(s || "").replace(/[&<>"']/g, function(c) {
+                    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+                });
+            }
+
+            async function loadDuty() {
+                if(!sb) {
+                    dutyMemberList.innerHTML = '<div class="p-3 text-red-400">数据库未连接</div>';
+                    dutyTodayBox.innerHTML = '<div class="scan-hint">数据库未连接</div>';
+                    return;
+                }
+                await loadDutyMembers();
+                await loadDutyRecords();
+                renderDutyToday();
+            }
+
+            async function loadDutyMembers() {
+                const { data, error } = await sb.from("duty_members").select("*").order("id", { ascending: true });
+                if(error) {
+                    dutyMemberList.innerHTML = `<div class="p-3 text-red-400">读取成员失败：${escapeHtml(error.message)}</div>`;
+                    dutyMembers = [];
+                    return;
+                }
+                dutyMembers = data || [];
+                renderDutyMembers();
+            }
+
+            function renderDutyMembers() {
+                dutyMemberList.innerHTML = "";
+                if(dutyMembers.length === 0) {
+                    dutyMemberList.innerHTML = '<div class="p-3 text-slate-500 text-center">暂未添加值日成员</div>';
+                    return;
+                }
+                dutyMembers.forEach(function(item, idx) {
+                    const row = document.createElement("div");
+                    row.className = "list-row";
+                    row.innerHTML = `
+                        <span>
+                            <span class="badge badge-ok">第 ${idx + 1} 位</span>
+                            <span style="margin-left:6px;">${escapeHtml(item.name)}</span>
+                        </span>
+                        <span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>
+                    `;
+                    dutyMemberList.appendChild(row);
+                });
+                document.querySelectorAll("#duty-member-list .del-btn").forEach(function(btn) {
+                    btn.addEventListener("click", async function() {
+                        await sb.from("duty_members").delete().eq("id", btn.dataset.id);
+                        loadDuty();
+                    });
+                });
+            }
+
+            async function loadDutyRecords() {
+                const { data, error } = await sb.from("duty_records").select("*").order("date", { ascending: false });
+                if(error) {
+                    dutyRecordList.innerHTML = `<div class="p-3 text-red-400">读取记录失败：${escapeHtml(error.message)}</div>`;
+                    dutyRecords = [];
+                    return;
+                }
+                dutyRecords = data || [];
+                renderDutyRecords();
+            }
+
+            function parseMembers(raw) {
+                if (!raw) return [];
+                if (Array.isArray(raw)) return raw;
+                try { return JSON.parse(raw); } catch(e) { return String(raw).split(/[,，、\s]+/).filter(Boolean); }
+            }
+
+            function renderDutyRecords() {
+                dutyRecordList.innerHTML = "";
+                if(dutyRecords.length === 0) {
+                    dutyRecordList.innerHTML = '<div class="p-3 text-slate-500 text-center">暂无值日记录</div>';
+                    return;
+                }
+                dutyRecords.forEach(function(item) {
+                    const names = parseMembers(item.members);
+                    const row = document.createElement("div");
+                    row.className = "list-row flex-wrap gap-2";
+                    row.innerHTML = `
+                        <div style="min-width:0;flex:1;">
+                            <div class="font-semibold text-sm">${escapeHtml(item.date)}</div>
+                            <div class="text-xs text-slate-300 mt-1">${names.map(escapeHtml).join("、")}</div>
+                        </div>
+                        <span class="del-btn" data-id="${item.id}"><i class="fa fa-trash"></i> 删除</span>
+                    `;
+                    dutyRecordList.appendChild(row);
+                });
+                document.querySelectorAll("#duty-record-list .del-btn").forEach(function(btn) {
+                    btn.addEventListener("click", async function() {
+                        if(!confirm("确定删除这条值日记录吗？")) return;
+                        await sb.from("duty_records").delete().eq("id", btn.dataset.id);
+                        loadDuty();
+                    });
+                });
+            }
+
+            function renderDutyToday() {
+                const today = todayStr();
+                const todayRecord = dutyRecords.find(function(r) { return r.date === today; });
+                if(todayRecord) {
+                    const names = parseMembers(todayRecord.members);
+                    const orderMap = {};
+                    dutyMembers.forEach(function(m, i) { orderMap[m.name] = i + 1; });
+                    dutyTodayBox.innerHTML =
+                        `<div class="text-sm text-slate-400 mb-2">${today} 值日生（按名单顺序，共 ${names.length} 人）：</div>` +
+                        names.map(function(n) {
+                            const pos = orderMap[n] ? `第 ${orderMap[n]} 位` : "";
+                            return `<span class="duty-chip">${escapeHtml(n)}${pos ? `<span style="font-size:11px;opacity:.7;">（${pos}）</span>` : ""}</span>`;
+                        }).join("");
+                } else {
+                    dutyTodayBox.innerHTML = '<div class="scan-hint">今日尚未安排值日，点击「生成今日值日」将按名单顺序依次安排 4 人，不随机抽取</div>';
+                }
+            }
+
+            // 添加值日成员
+            dutyAddBtn.addEventListener("click", async function() {
+                if(!sb) { alert("数据库未连接"); return; }
+                const name = dutyNameInput.value.trim();
+                if (!name) return;
+                const { error } = await sb.from("duty_members").insert({ name: name });
+                if(error) {
+                    alert("添加失败，姓名可能重复");
+                    return;
+                }
+                dutyNameInput.value = "";
+                loadDuty();
+            });
+
+            // 生成今日值日：按名单顺序环形取 DUTY_PER_DAY 人
+            dutyGenBtn.addEventListener("click", async function() {
+                if(!sb) { dutyTip.innerHTML = '<div class="tip-err">数据库未连接</div>'; return; }
+                if(dutyMembers.length === 0) {
+                    dutyTip.innerHTML = '<div class="tip-err">请先在下方添加值日成员</div>';
+                    return;
+                }
+                if(dutyMembers.length < CONFIG.DUTY_PER_DAY) {
+                    dutyTip.innerHTML = `<div class="tip-err">成员不足 ${CONFIG.DUTY_PER_DAY} 人，当前只有 ${dutyMembers.length} 人</div>`;
+                    return;
+                }
+
+                const today = todayStr();
+                // 今日已排过 → 直接刷新展示，不重复占用轮次
+                const existed = dutyRecords.find(function(r) { return r.date === today; });
+                if(existed) {
+                    dutyTip.innerHTML = '<div class="tip-ok">今日值日已安排，可在列表中查看；如需换人请先删除今日记录</div>';
+                    renderDutyToday();
+                    return;
+                }
+
+                // 找到上一条记录的起始下标，继续往后轮；没有则从 0 开始
+                let start = 0;
+                if(dutyRecords.length > 0) {
+                    const last = dutyRecords[dutyRecords.length - 1];
+                    start = (typeof last.start_index === "number") ? last.start_index : 0;
+                }
+
+                const names = dutyMembers.map(function(m) { return m.name; });
+                const picked = [];
+                for(let i = 0; i < CONFIG.DUTY_PER_DAY; i++) {
+                    picked.push(names[(start + i) % names.length]);
+                }
+                const nextStart = (start + CONFIG.DUTY_PER_DAY) % names.length;
+
+                const { error } = await sb.from("duty_records").insert({
+                    date: today,
+                    members: JSON.stringify(picked),
+                    start_index: nextStart
+                });
+                if(error) {
+                    dutyTip.innerHTML = `<div class="tip-err">排班失败：${escapeHtml(error.message)}</div>`;
+                    return;
+                }
+
+                dutyTip.innerHTML = `<div class="tip-ok">✅ 今日值日生：${picked.join("、")}</div>`;
+                await loadDuty();
+            });
+
+            // ========== 数据库配置页（SQL 展示 + 复制） ==========
+            const SQL_CREATE = [
+                "-- 值日成员表",
+                "create table if not exists duty_members (",
+                "  id   bigint generated always as identity primary key,",
+                "  name text not null unique",
+                ");",
+                "",
+                "-- 值日记录表",
+                "create table if not exists duty_records (",
+                "  id          bigint generated always as identity primary key,",
+                "  date        text not null,",
+                "  members     text not null,",
+                "  start_index integer not null default 0",
+                ");"
+            ].join("\n");
+
+            const SQL_POLICY = [
+                "-- 开启行级安全（RLS）",
+                "alter table public.duty_members enable row level security;",
+                "alter table public.duty_records enable row level security;",
+                "",
+                "-- duty_members 放开网页读写",
+                "create policy \"dm_select\" on public.duty_members for select to anon, authenticated using (true);",
+                "create policy \"dm_insert\" on public.duty_members for insert to anon, authenticated with check (true);",
+                "create policy \"dm_update\" on public.duty_members for update to anon, authenticated using (true) with check (true);",
+                "create policy \"dm_delete\" on public.duty_members for delete to anon, authenticated using (true);",
+                "",
+                "-- duty_records 放开网页读写",
+                "create policy \"dr_select\" on public.duty_records for select to anon, authenticated using (true);",
+                "create policy \"dr_insert\" on public.duty_records for insert to anon, authenticated with check (true);",
+                "create policy \"dr_update\" on public.duty_records for update to anon, authenticated using (true) with check (true);",
+                "create policy \"dr_delete\" on public.duty_records for delete to anon, authenticated using (true);"
+            ].join("\n");
+
+            const sqlCreateEl = document.getElementById("sql-create");
+            const sqlPolicyEl = document.getElementById("sql-policy");
+            const dbcfgTip    = document.getElementById("dbcfg-tip");
+            if (sqlCreateEl) sqlCreateEl.textContent = SQL_CREATE;
+            if (sqlPolicyEl) sqlPolicyEl.textContent = SQL_POLICY;
+
+            function copyDbText(text, label) {
+                function fallback() {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    ta.style.position = "fixed";
+                    ta.style.opacity = "0";
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try { document.execCommand("copy"); dbcfgTip.innerHTML = '<div class="tip-ok">✅ 已复制' + label + '</div>'; }
+                    catch(e) { dbcfgTip.innerHTML = '<div class="tip-err">❌ 复制失败，请手动选择文本</div>'; }
+                    ta.remove();
+                }
+                if(navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text)
+                        .then(function(){ dbcfgTip.innerHTML = '<div class="tip-ok">✅ 已复制' + label + '</div>'; })
+                        .catch(fallback);
+                } else {
+                    fallback();
+                }
+            }
+
+            document.querySelectorAll("[data-copy]").forEach(function(btn) {
+                btn.addEventListener("click", function() {
+                    const el = document.getElementById(btn.dataset.copy);
+                    if (!el) return;
+                    copyDbText(el.textContent, btn.dataset.copy === "sql-create" ? "建表 SQL" : "策略 SQL");
+                });
             });
 
             // ========== 生成信息管理 ==========
@@ -827,7 +1196,6 @@
                 gmTipTimer = setTimeout(function() { gmTip.innerHTML = ""; }, 3000);
             }
 
-            // 拉取全部兑换码数据
             async function loadGenList() {
                 if(!sb) {
                     gmList.innerHTML = '<div class="p-3 text-red-400">数据库未连接</div>';
@@ -843,7 +1211,6 @@
                 renderGenList();
             }
 
-            // 渲染统计 + 列表
             function renderGenList() {
                 const kw = gmSearch.value.trim().toUpperCase();
                 const f  = gmFilter.value;
@@ -894,7 +1261,6 @@
                 });
             }
 
-            // 展开 / 收起二维码（内容为网址+兑换码）
             function toggleQr(row, item) {
                 const next = row.nextElementSibling;
                 if(next && next.classList.contains("qr-row")) {
@@ -912,13 +1278,12 @@
                 box.appendChild(label);
                 const hint = document.createElement("div");
                 hint.style.cssText = "font-size:11px;color:#666;margin-top:6px;";
-                hint.textContent = "扫码 → 登录 → 自动核销";
+                hint.textContent = "扫码 →自动核销";
                 box.appendChild(hint);
                 row.insertAdjacentElement("afterend", box);
                 new QRCode(holder, { text: buildQrText(item.code), width: 140, height: 140 });
             }
 
-            // 复制文本（兼容非 HTTPS 环境）
             function copyText(text) {
                 function fallback() {
                     const ta = document.createElement("textarea");
@@ -944,7 +1309,6 @@
                 }
             }
 
-            // 列表按钮事件委托
             gmList.addEventListener("click", async function(e) {
                 const btn = e.target.closest("[data-act]");
                 if(!btn) return;
@@ -975,12 +1339,10 @@
                 }
             });
 
-            // 搜索 / 筛选 / 刷新
             gmSearch.addEventListener("input", renderGenList);
             gmFilter.addEventListener("change", renderGenList);
             gmRefresh.addEventListener("click", loadGenList);
 
-            // 导出 CSV
             gmExport.addEventListener("click", function() {
                 if(gmAllData.length === 0) {
                     showGmTip("❌ 暂无数据可导出", false);
@@ -1005,12 +1367,11 @@
                 showGmTip("✅ 已导出 " + gmAllData.length + " 条记录", true);
             });
 
-            // 删除已使用
             gmDelUsed.addEventListener("click", async function() {
                 if(!sb) { showGmTip("❌ 数据库未连接", false); return; }
                 const usedCount = gmAllData.filter(function(i) { return i.used; }).length;
                 if(usedCount === 0) { showGmTip("⚠️ 没有已使用的兑换码", false); return; }
-                if(!confirm("确定删除全部 " + usedCount + " 条【已使用】的兑换码吗？此操作不可恢复！")) return;
+                if(!confirm("确定删除全部 " + usedCount + " 条【已使用】的兑换码吗？<br>此操作不可恢复！")) return;
 
                 const { error } = await sb.from("codes").delete().eq("used", true);
                 if(error) { showGmTip("❌ 删除失败：" + error.message, false); return; }
@@ -1018,11 +1379,10 @@
                 loadGenList();
             });
 
-            // 清空全部
             gmDelAll.addEventListener("click", async function() {
                 if(!sb) { showGmTip("❌ 数据库未连接", false); return; }
                 if(gmAllData.length === 0) { showGmTip("⚠️ 暂无数据", false); return; }
-                if(!confirm("确定清空全部 " + gmAllData.length + " 条兑换码吗？此操作不可恢复！")) return;
+                if(!confirm("确定清空全部 " + gmAllData.length + " 条兑换码吗？<br>此操作不可恢复！")) return;
                 if(!confirm("再次确认：真的要清空所有生成记录吗？")) return;
 
                 const { error } = await sb.from("codes").delete().gte("id", 0);
